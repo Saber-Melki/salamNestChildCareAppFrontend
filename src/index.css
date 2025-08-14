@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+.bg-accent {
+  @apply bg-neutral-100;
+}
+
+input::placeholder {
+  color: rgb(148 163 184);
+}
