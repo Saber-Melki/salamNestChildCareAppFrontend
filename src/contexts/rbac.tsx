@@ -10,6 +10,8 @@ type RBACContextValue = {
   can: (permission: string) => boolean
 }
 
+const defaultRole: Role = "admin"
+
 const rolePermissions: Record<Role, string[]> = {
   admin: [
     "view:dashboard",
@@ -43,7 +45,11 @@ const rolePermissions: Record<Role, string[]> = {
 const RBACContext = React.createContext<RBACContextValue | null>(null)
 
 export function RBACProvider({ children }: { children: React.ReactNode }) {
-  const [role, setRole] = React.useState<Role>(() => (localStorage.getItem("role") as Role) || "admin")
+  const [role, setRole] = React.useState<Role>(() => {
+    if (typeof window === "undefined") return defaultRole
+    return (localStorage.getItem("role") as Role) || defaultRole
+  })
+
   React.useEffect(() => {
     localStorage.setItem("role", role)
   }, [role])
@@ -57,4 +63,16 @@ export function useRBAC() {
   const ctx = React.useContext(RBACContext)
   if (!ctx) throw new Error("useRBAC must be used inside RBACProvider")
   return ctx
+}
+
+export function Require({ permission, children }: { permission: string; children: React.ReactNode }) {
+  const { can } = useRBAC()
+  if (!can(permission)) {
+    return (
+      <div className="p-6 text-center text-sm text-muted-foreground">
+        You do not have permission to view this section.
+      </div>
+    )
+  }
+  return <>{children}</>
 }

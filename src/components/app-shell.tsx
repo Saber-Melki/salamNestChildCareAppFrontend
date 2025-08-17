@@ -104,7 +104,14 @@ function BrandHeader({ collapsed }: { collapsed: boolean }) {
         <div className="relative rounded-[11px] bg-white/70 backdrop-blur border">
           <div className={cn("relative flex items-center gap-3 h-14 px-3", collapsed && "justify-center")}>
             <div className="relative">
-              <img src="/login-image.png" width={100} height={70} alt="Brand logo" className="rounded-md" />
+              <img
+                src="/login-image.png"
+                width={70}
+                height={70}
+                alt="Brand logo"
+                className="rounded-lg"
+              />
+              <div className="absolute -top-0.5 -right-1 w-3 h-3 bg-emerald-400 rounded-full animate-ping" />
             </div>
             {!collapsed && (
               <div className="flex flex-col">
@@ -238,19 +245,6 @@ function Header({ title }: { title?: string }) {
             aria-label="Global search"
           />
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className={cn(
-            "hidden sm:flex gap-2 border-0 text-white shadow-sm",
-            "bg-gradient-to-r",
-            theme.gradFrom,
-            theme.gradTo,
-          )}
-        >
-          <Plus className="h-4 w-4" />
-          New
-        </Button>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           <span className="sr-only">Notifications</span>

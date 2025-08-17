@@ -19,7 +19,7 @@ import { cn } from "../lib/utils"
 function GradientHero() {
   return (
     <div className="relative overflow-hidden rounded-2xl border shadow-sm">
-      <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-lime-400 opacity-90" />
+      <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-400 opacity-90" />
       <div className="relative p-6 md:p-8 text-white">
         <div className="flex items-start gap-3">
           <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur">

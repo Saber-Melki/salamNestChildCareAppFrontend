@@ -236,9 +236,9 @@ function LoginScreen() {
                       <div className="grid grid-cols-3 gap-3">
                         {(
                           [
-                            { key: "admin", label: "Admin", icon: Settings, color: "emerald" },
-                            { key: "staff", label: "Staff", icon: Users, color: "violet" },
-                            { key: "parent", label: "Parent", icon: User, color: "rose" },
+                            { key: "admin", label: "Admin", icon: Settings, color: "violet" },
+                            { key: "staff", label: "Staff", icon: Users, color: "emerald" },
+                            { key: "parent", label: "Parent", icon: User, color: "pink" },
                           ] as { key: Role; label: string; icon: any; color: string }[]
                         ).map((r) => {
                           const Icon = r.icon
