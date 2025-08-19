@@ -59,14 +59,14 @@ export default function Health() {
   const [rows, setRows] = React.useState<HealthRecord[]>([
     {
       id: "1",
-      child: "Ava Johnson",
+      child: "Haroun Said",
       allergies: "Peanuts",
       immunizations: "Up to date",
       emergency: "EpiPen in office",
       notes: [
         {
           id: "n1",
-          child: "Ava Johnson",
+          child: "Haroun Said",
           noteType: "Allergy",
           description: "Severe peanut allergy - EpiPen required",
           date: "2024-01-15",
@@ -74,7 +74,7 @@ export default function Health() {
         },
         {
           id: "n2",
-          child: "Ava Johnson",
+          child: "Haroun Said",
           noteType: "Checkup",
           description: "Annual physical completed - all normal",
           date: "2024-02-01",
@@ -84,14 +84,14 @@ export default function Health() {
     },
     {
       id: "2",
-      child: "Mia Chen",
+      child: "Maya Ouni",
       allergies: "Dairy",
       immunizations: "Missing Flu",
       emergency: "N/A",
       notes: [
         {
           id: "n3",
-          child: "Mia Chen",
+          child: "Maya Ouni",
           noteType: "Allergy",
           description: "Lactose intolerant - dairy-free meals required",
           date: "2024-01-10",
@@ -101,14 +101,14 @@ export default function Health() {
     },
     {
       id: "3",
-      child: "Noah Smith",
+      child: "Joud Limem",
       allergies: "None",
       immunizations: "Up to date",
       emergency: "N/A",
       notes: [
         {
           id: "n4",
-          child: "Noah Smith",
+          child: "Joud Limem",
           noteType: "Checkup",
           description: "No known allergies - annual physical completed",
           date: "2024-01-20",

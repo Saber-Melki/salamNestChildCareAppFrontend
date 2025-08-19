@@ -19,9 +19,11 @@ type RecordT = {
 
 export default function Attendance() {
   const [rows, setRows] = React.useState<RecordT[]>([
-    { id: "1", name: "Ava Johnson", group: "Sunflowers", status: "present", checkIn: "08:12" },
-    { id: "2", name: "Liam Garcia", group: "Sunflowers", status: "away", checkIn: "09:01", checkOut: "11:05" },
-    { id: "3", name: "Mia Chen", group: "Butterflies", status: "present", checkIn: "08:43" },
+    { id: "1", name: "Inyaz Zaiem", group: "Sunflowers", status: "present", checkIn: "08:12" },
+    { id: "2", name: "Haroun Said", group: "Sunflowers", status: "away", checkIn: "09:01", checkOut: "11:05" },
+    { id: "3", name: "Maya Ouni", group: "Butterflies", status: "present", checkIn: "08:43" },
+    { id: "4", name: "Joud Limem", group: "Butterflies", status: "away", checkIn: "08:30", checkOut: "10:15" },
+    
   ])
   const [filter, setFilter] = React.useState("")
 

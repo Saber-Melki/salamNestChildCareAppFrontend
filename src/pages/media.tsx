@@ -538,7 +538,7 @@ export default function Media() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5 text-blue-600" />
+              <Upload className="h-5 w-5 text-purple-600" />
               Upload Media
             </DialogTitle>
             <DialogDescription>
@@ -652,7 +652,7 @@ export default function Media() {
               <Button type="button" variant="outline" onClick={() => setUploadDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-gradient-to-r from-blue-500 to-cyan-400 text-white border-0">
+              <Button type="submit" className="bg-gradient-to-r from-purple-500 to-pink-400 text-white border-0">
                 Upload Media
               </Button>
             </DialogFooter>
@@ -665,7 +665,7 @@ export default function Media() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FolderPlus className="h-5 w-5 text-green-600" />
+              <FolderPlus className="h-5 w-5 text-purple-600" />
               Create New Album
             </DialogTitle>
             <DialogDescription>Create a new album to organize your photos and videos.</DialogDescription>
@@ -714,7 +714,7 @@ export default function Media() {
               <Button type="button" variant="outline" onClick={() => setAlbumDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-gradient-to-r from-green-500 to-emerald-400 text-white border-0">
+              <Button type="submit" className="bg-gradient-to-r from-purple-500 to-pink-400 text-white border-0">
                 Create Album
               </Button>
             </DialogFooter>
@@ -727,7 +727,7 @@ export default function Media() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Edit className="h-5 w-5 text-blue-600" />
+              <Edit className="h-5 w-5 text-purple-600" />
               Edit Album
             </DialogTitle>
             <DialogDescription>Update the album information and settings.</DialogDescription>
@@ -776,7 +776,7 @@ export default function Media() {
               <Button type="button" variant="outline" onClick={() => setEditAlbumDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-gradient-to-r from-blue-500 to-cyan-400 text-white border-0">
+              <Button type="submit" className="bg-gradient-to-r from-purple-500 to-pink-400 text-white border-0">
                 Update Album
               </Button>
             </DialogFooter>

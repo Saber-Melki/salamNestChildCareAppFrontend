@@ -12,8 +12,8 @@ export default function Reports() {
 
   const attendance = [
     ["Date", "Child", "Status", "Check-in", "Check-out"],
-    ["2025-08-01", "Ava Johnson", "Present", "08:12", "16:01"],
-    ["2025-08-01", "Liam Garcia", "Away", "09:01", "11:05"],
+    ["2025-08-01", "Inyaz Zaiem", "Present", "08:12", "16:01"],
+    ["2025-08-01", "Haroun Said", "Away", "09:01", "11:05"],
   ]
   const revenue = [
     ["Month", "Collected", "Outstanding"],
@@ -22,8 +22,8 @@ export default function Reports() {
   ]
   const milestones = [
     ["Child", "Milestone", "Date", "Notes"],
-    ["Ava Johnson", "Language - New words", "2025-08-01", "Said 'butterfly'"],
-    ["Mia Chen", "Motor - Balance", "2025-07-29", "Balances on one foot"],
+    ["Inyaz Zaiem", "Language - New words", "2025-08-01", "Said 'butterfly'"],
+    ["Haroun Said", "Motor - Balance", "2025-07-29", "Balances on one foot"],
   ]
 
   return (

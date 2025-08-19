@@ -39,7 +39,7 @@ const rolePermissions: Record<Role, string[]> = {
     "manage:calendar",
     "view:parent-portal",
   ],
-  parent: ["view:dashboard", "view:messages", "view:media", "view:reports", "view:parent-portal"],
+  parent: ["view:dashboard", "view:messages", "view:media", "view:reports", "view:calendar", "view:parent-portal"],
 }
 
 const RBACContext = React.createContext<RBACContextValue | null>(null)

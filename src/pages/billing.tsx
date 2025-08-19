@@ -38,7 +38,7 @@ export default function Billing() {
   const [invoices, setInvoices] = React.useState<Invoice[]>([
     {
       id: "INV-1023",
-      family: "Johnson",
+      family: "Said",
       amount: 850,
       status: "paid",
       dueDate: "2025-08-01",
@@ -49,7 +49,7 @@ export default function Billing() {
     },
     {
       id: "INV-1024",
-      family: "Garcia",
+      family: "Ouni",
       amount: 950,
       status: "due",
       dueDate: "2025-08-15",
@@ -60,7 +60,7 @@ export default function Billing() {
     },
     {
       id: "INV-1025",
-      family: "Chen",
+      family: "Zaim",
       amount: 800,
       status: "overdue",
       dueDate: "2025-07-30",

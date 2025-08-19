@@ -106,7 +106,7 @@ export default function Dashboard() {
                   className="rounded-full"
                 />
                 <div className="flex-1">
-                  <div className="font-medium">Ava Johnson</div>
+                  <div className="font-medium">Inyaz Zaiem</div>
                   <div className="text-xs text-neutral-500">Checked in at 8:12 AM</div>
                 </div>
                 <Badge variant="secondary">Present</Badge>
@@ -120,7 +120,7 @@ export default function Dashboard() {
                   className="rounded-full"
                 />
                 <div className="flex-1">
-                  <div className="font-medium">Liam Garcia</div>
+                  <div className="font-medium">Haroun Said</div>
                   <div className="text-xs text-neutral-500">Checked out at 11:05 AM (appt.)</div>
                 </div>
                 <Badge variant="destructive">Away</Badge>
