@@ -319,7 +319,7 @@ export default function Health() {
                   value={formData.child}
                   onValueChange={(value) => setFormData((prev) => ({ ...prev, child: value }))}
                 >
-                  <SelectTrigger className="mt-1" placeholder="Select child">
+                  <SelectTrigger className="mt-1">
                     {formData.child || "Select child"}
                   </SelectTrigger>
                   <SelectContent>
@@ -338,7 +338,7 @@ export default function Health() {
                   value={formData.noteType}
                   onValueChange={(value) => setFormData((prev) => ({ ...prev, noteType: value }))}
                 >
-                  <SelectTrigger className="mt-1" placeholder="Select type">
+                  <SelectTrigger className="mt-1">
                     {formData.noteType || "Select type"}
                   </SelectTrigger>
                   <SelectContent>

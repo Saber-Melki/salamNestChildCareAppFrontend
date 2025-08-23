@@ -157,7 +157,7 @@ export default function Billing() {
                           value={formData.family}
                           onValueChange={(value) => setFormData((prev) => ({ ...prev, family: value }))}
                         >
-                          <SelectTrigger className="mt-1" placeholder="Select family">
+                          <SelectTrigger className="mt-1">
                             {formData.family || "Select family"}
                           </SelectTrigger>
                           <SelectContent>

@@ -9,7 +9,7 @@ type Branding = {
 }
 
 const defaultBranding: Branding = {
-  name: "ChildCare",
+  name: "SalamNest",
   accent: "emerald",
   logoUrl: "/login-image.jpg",
 }

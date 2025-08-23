@@ -91,6 +91,7 @@ const NAV_ITEMS = [
   { label: "Media", href: "/media", icon: Camera, permission: "view:media", section: "Engagement" },
   { label: "Reports", href: "/reports", icon: FileText, permission: "view:reports", section: "Insights" },
   { label: "Calendar", href: "/calendar", icon: CalendarDays, permission: "manage:calendar", section: "Insights" },
+  { label: "Staff", href: "/staff", icon: Users, permission: "manage:settings", section: "System" },
   { label: "Settings", href: "/settings", icon: Settings, permission: "manage:settings", section: "System" },
 ]
 
@@ -115,7 +116,7 @@ function BrandHeader({ collapsed }: { collapsed: boolean }) {
             </div>
             {!collapsed && (
               <div className="flex flex-col">
-                <div className="font-semibold leading-5">ChildCare</div>
+                <div className="font-semibold leading-5">SalamNest</div>
                 <div className="text-[10px] text-neutral-500">More Than Care, <br />A Place to Grow</div>
               </div>
             )}

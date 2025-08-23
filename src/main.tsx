@@ -14,6 +14,7 @@ import Messages from "./pages/messages"
 import Media from "./pages/media"
 import Reports from "./pages/reports"
 import Calendar from "./pages/calendar"
+import Staff from "./pages/staff"
 import Settings from "./pages/settings"
 import Login from "./pages/login"
 import Logout from "./pages/logout"
@@ -35,6 +36,7 @@ const router = createBrowserRouter([
       { path: "media", element: <Media /> },
       { path: "reports", element: <Reports /> },
       { path: "calendar", element: <Calendar /> },
+      { path: "staff", element: <Staff /> },
       { path: "settings", element: <Settings /> },
     ],
   },

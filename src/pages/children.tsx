@@ -230,7 +230,6 @@ export default function Children() {
         <div className="flex items-end gap-3">
           <div className="flex-1">
             <Input
-              placeholder="Search children..."
               value={q}
               onChange={(e) => setQ(e.target.value)}
               aria-label="Search children"
@@ -385,7 +384,7 @@ export default function Children() {
                       value={formData.group}
                       onValueChange={(value) => setFormData((prev) => ({ ...prev, group: value }))}
                     >
-                      <SelectTrigger className="mt-1" placeholder="Select group">
+                      <SelectTrigger className="mt-1">
                         {formData.group || "Select group"}
                       </SelectTrigger>
                       <SelectContent>

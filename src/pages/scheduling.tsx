@@ -385,7 +385,7 @@ export default function Scheduling() {
                     value={formData.role}
                     onValueChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}
                   >
-                    <SelectTrigger className="mt-1" placeholder="Select role">
+                    <SelectTrigger className="mt-1">
                       {formData.role || "Select role"}
                     </SelectTrigger>
                     <SelectContent>

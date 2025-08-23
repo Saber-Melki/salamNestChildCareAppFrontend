@@ -15,14 +15,13 @@ function Protected({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
+    
     <BrandingProvider>
-      <RBACProvider>
-        <Protected>
-          {/* <AppShell> */}
+        <RBACProvider>
+          <Protected>
             <Outlet />
-          {/* </AppShell> */}
-        </Protected>
-      </RBACProvider>
+          </Protected>
+        </RBACProvider>
     </BrandingProvider>
   )
 }

@@ -98,7 +98,7 @@ function LoginScreen() {
                       <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full animate-ping" />
                     </div>
                     <div>
-                      <div className="font-bold text-lg">{name}</div>
+                      <div className="font-bold text-lg">SalamNest</div>
                       <div className="text-xs text-white/80">Childcare Management System</div>
                     </div>
                   </div>
