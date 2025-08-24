@@ -344,7 +344,7 @@ export default function Media() {
                 <div className="aspect-video relative overflow-hidden">
                   <img
                     // src={album.coverImage || "/placeholder.svg"}
-                    src={"/garderie.jpg"}
+                    src={"/galerie.jpg"}
                     alt={album.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
@@ -415,7 +415,7 @@ export default function Media() {
                 <div className="aspect-square relative overflow-hidden">
                   <img
                     // src={item.url || "/placeholder.svg"}
-                    src={"/garderie.jpg"}
+                    src={"/galerie.jpg"}
                     alt={item.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
@@ -570,7 +570,7 @@ export default function Media() {
                   value={uploadFormData.albumId}
                   onValueChange={(value) => setUploadFormData((prev) => ({ ...prev, albumId: value }))}
                 >
-                  <SelectTrigger className="mt-1" placeholder="Select album">
+                  <SelectTrigger className="mt-1">
                     {uploadFormData.albumId
                       ? albums.find((a) => a.id === uploadFormData.albumId)?.name
                       : "Select album"}

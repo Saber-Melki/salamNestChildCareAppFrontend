@@ -149,15 +149,15 @@ function LoginScreen() {
             <div className="mb-8 flex items-center justify-center gap-3 lg:hidden">
               <div className="relative">
                 <img
-                  src={"/graderie.jpg"}
-                  width={40}
-                  height={40}
+                  src={"/login-image.png"}
+                  width={80}
+                  height={80}
                   alt="Brand logo"
                   className="rounded-xl"
                 />
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full animate-ping" />
               </div>
-              <div className="text-xl font-bold">{name}</div>
+              <div className="text-xl font-bold">SalamNest</div>
             </div>
 
             {/* Main form container with enhanced glass effect */}
