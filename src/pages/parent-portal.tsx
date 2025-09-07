@@ -1,328 +1,322 @@
-"use client"
-
-import { useState } from "react"
-import Image from "next/image"
 import { AppShell, Section } from "../components/app-shell"
-import { Require } from "../components/rbac"
+import { Card, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Badge } from "../components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
-import { PageHero, StatCard } from "../components/ui-extras"
-import { Users, Camera, MessageSquare, HeartPulse, CheckSquare, CalendarDays, Clock, AlertTriangle } from "lucide-react"
+// Update the import path below if the Avatar component is located elsewhere
+import { Progress } from "../components/ui/progress"
+import { Separator } from "../components/ui/separator"
+import { useRBAC } from "../contexts/rbac"
+import {
+  Calendar,
+  Clock,
+  Heart,
+  MessageCircle,
+  Camera,
+  FileText,
+  Star,
+  Phone,
+  User,
+  Activity,
+  BookOpen,
+  Utensils,
+  Moon,
+  Shield,
+} from "lucide-react"
 
-type ChildData = {
-  id: string
-  name: string
-  age: number
-  group: string
-  avatar: string
-  status: "present" | "away"
-  checkIn?: string
-  checkOut?: string
-  allergies?: string[]
-  nextEvent?: string
-}
+export default function ParentPortal() {
+  const { can } = useRBAC()
 
-type Message = {
-  id: string
-  from: "teacher" | "parent"
-  text: string
-  time: string
-  read: boolean
-}
-
-type Photo = {
-  id: string
-  url: string
-  caption: string
-  date: string
-}
-
-export default function Page() {
-  // Mock data for parent's children
-  const [children] = useState<ChildData[]>([
-    {
-      id: "1",
-      name: "Ava Johnson",
-      age: 4,
-      group: "Sunflowers",
-      avatar: "/non-photorealistic-child-avatar.png",
-      status: "present",
-      checkIn: "08:12",
-      allergies: ["Peanuts"],
-      nextEvent: "Art Class at 2:00 PM",
-    },
-  ])
-
-  const [messages] = useState<Message[]>([
-    {
-      id: "1",
-      from: "teacher",
-      text: "Ava had a wonderful day today! She participated actively in story time.",
-      time: "3:45 PM",
-      read: false,
-    },
-    { id: "2", from: "teacher", text: "Reminder: Tomorrow is show and tell day.", time: "Yesterday", read: true },
-    { id: "3", from: "parent", text: "Thank you for the update!", time: "Yesterday", read: true },
-  ])
-
-  const [photos] = useState<Photo[]>([
-    {
-      id: "1",
-      url: "/classroom-moment.png?height=300&width=300&query=child%20painting",
-      caption: "Art time with watercolors",
-      date: "Today",
-    },
-    {
-      id: "2",
-      url: "/classroom-moment.png?height=300&width=300&query=child%20reading",
-      caption: "Story time favorites",
-      date: "Yesterday",
-    },
-    {
-      id: "3",
-      url: "/classroom-moment.png?height=300&width=300&query=child%20playing",
-      caption: "Playground adventures",
-      date: "2 days ago",
-    },
-    {
-      id: "4",
-      url: "/classroom-moment.png?height=300&width=300&query=child%20learning",
-      caption: "Learning shapes and colors",
-      date: "3 days ago",
-    },
-  ])
-
-  const child = children[0] // For demo, showing single child
-  const unreadMessages = messages.filter((m) => !m.read).length
+  if (!can("view:parent-portal")) {
+    return (
+      <AppShell title="Parent Portal">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
+            <p className="text-gray-500">You don't have permission to view the parent portal.</p>
+          </div>
+        </div>
+      </AppShell>
+    )
+  }
 
   return (
     <AppShell title="Parent Portal">
-      <PageHero
-        title="Parent Portal"
-        subtitle={`Welcome! Here's what's happening with ${child.name} today.`}
-        icon={Users}
-      />
-
-      <Require permission="view:parent-portal">
-        <div className="space-y-6">
-          {/* Quick Stats */}
-          <div className="grid gap-4 md:grid-cols-4">
-            <StatCard
-              title="Status Today"
-              value={child.status === "present" ? "Present" : "Away"}
-              icon={CheckSquare}
-              hint={child.checkIn ? `Checked in at ${child.checkIn}` : "Not checked in"}
-            />
-            <StatCard title="Unread Messages" value={unreadMessages} icon={MessageSquare} hint="From teachers" />
-            <StatCard title="New Photos" value="4" icon={Camera} hint="This week" />
-            <StatCard title="Next Activity" value="Art Class" icon={Clock} hint="2:00 PM today" />
+      <div className="space-y-6">
+        {/* Welcome Header */}
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 p-6 text-white">
+          <div className="relative z-10">
+            <h1 className="text-2xl font-bold text-balance">Welcome back, Michael!</h1>
+            <p className="mt-2 text-white/90">Here's what's happening with Emma today</p>
           </div>
+          <div className="absolute right-4 top-4 opacity-20">
+            <Heart className="h-16 w-16" />
+          </div>
+        </div>
 
-          {/* Child Profile Card */}
-          <Section title="My Child" description="Current status and important information">
-            <div className="flex items-start gap-4">
-              <Image
-                src={child.avatar || "/placeholder.svg"}
-                alt={`${child.name} avatar`}
-                width={80}
-                height={80}
-                className="rounded-full"
-              />
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-xl font-semibold">{child.name}</h3>
-                  <Badge variant={child.status === "present" ? "secondary" : "destructive"}>
-                    {child.status === "present" ? "Present" : "Away"}
+        {/* Quick Stats Grid */}
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="rounded-full bg-emerald-100 p-2">
+                <Clock className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Check-in Time</p>
+                <p className="text-xs text-neutral-500">8:15 AM</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="rounded-full bg-teal-100 p-2">
+                <Activity className="h-4 w-4 text-teal-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Activities</p>
+                <p className="text-xs text-neutral-500">4 completed</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="rounded-full bg-amber-100 p-2">
+                <Utensils className="h-4 w-4 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Meals</p>
+                <p className="text-xs text-neutral-500">Lunch eaten</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="rounded-full bg-indigo-100 p-2">
+                <Moon className="h-4 w-4 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Nap Time</p>
+                <p className="text-xs text-neutral-500">1.5 hours</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Main Content */}
+          <div className="space-y-6 lg:col-span-2">
+            {/* Today's Report */}
+            <Section title="Today's Report" description="Emma's daily activities and progress">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {/* <Avatar className="h-12 w-12">
+                      <AvatarImage src="/happy-child.png" />
+                      <AvatarFallback>EB</AvatarFallback>
+                    </Avatar> */}
+                    <div>
+                      <h3 className="font-semibold">Emma Brown</h3>
+                      <p className="text-sm text-neutral-500">Room: Sunshine Class</p>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">
+                    Great Day!
                   </Badge>
                 </div>
-                <div className="grid gap-2 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Age:</span> {child.age} years old
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Group:</span> {child.group}
-                  </div>
-                  {child.checkIn && (
-                    <div>
-                      <span className="text-muted-foreground">Checked in:</span> {child.checkIn}
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-full bg-emerald-100 p-1.5 mt-0.5">
+                      <BookOpen className="h-3 w-3 text-emerald-600" />
                     </div>
-                  )}
-                  {child.nextEvent && (
-                    <div>
-                      <span className="text-muted-foreground">Next:</span> {child.nextEvent}
-                    </div>
-                  )}
-                </div>
-                {child.allergies && child.allergies.length > 0 && (
-                  <div className="flex items-center gap-2 mt-3">
-                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                    <span className="text-sm text-muted-foreground">Allergies:</span>
-                    {child.allergies.map((allergy) => (
-                      <Badge key={allergy} variant="destructive" className="text-xs">
-                        {allergy}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </Section>
-
-          {/* Tabbed Content */}
-          <Tabs defaultValue="today" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="today">Today</TabsTrigger>
-              <TabsTrigger value="messages">Messages</TabsTrigger>
-              <TabsTrigger value="photos">Photos</TabsTrigger>
-              <TabsTrigger value="schedule">Schedule</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="today" className="space-y-4">
-              <Section title="Daily Report" description="How your child's day is going">
-                <div className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base">Activities Completed</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span>Morning Circle</span>
-                            <Badge variant="secondary">Done</Badge>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span>Snack Time</span>
-                            <Badge variant="secondary">Done</Badge>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span>Art Class</span>
-                            <Badge variant="outline">In Progress</Badge>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base">Meals & Snacks</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span>Morning Snack</span>
-                            <span className="text-emerald-600">Ate well</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span>Lunch</span>
-                            <span className="text-muted-foreground">Upcoming</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base">Teacher Notes</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">
-                        "Ava was very engaged during story time today and helped clean up after art activities. She's
-                        showing great progress with sharing and taking turns with friends."
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Learning Activities</p>
+                      <p className="text-xs text-neutral-500">
+                        Emma participated in story time and practiced writing letters. She showed great focus during art
+                        class.
                       </p>
-                    </CardContent>
-                  </Card>
-                </div>
-              </Section>
-            </TabsContent>
-
-            <TabsContent value="messages" className="space-y-4">
-              <Section title="Messages" description="Communication with teachers">
-                <div className="space-y-3">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`p-3 rounded-lg border ${
-                        !message.read
-                          ? "bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800"
-                          : "bg-background"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm">{message.from === "teacher" ? "Teacher" : "You"}</span>
-                          {!message.read && (
-                            <Badge variant="secondary" className="text-xs">
-                              New
-                            </Badge>
-                          )}
-                        </div>
-                        <span className="text-xs text-muted-foreground">{message.time}</span>
-                      </div>
-                      <p className="text-sm">{message.text}</p>
                     </div>
-                  ))}
-                  <Button className="w-full">Send New Message</Button>
-                </div>
-              </Section>
-            </TabsContent>
-
-            <TabsContent value="photos" className="space-y-4">
-              <Section title="Recent Photos" description="Moments from your child's day">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {photos.map((photo) => (
-                    <div key={photo.id} className="space-y-2">
-                      <div className="relative aspect-square overflow-hidden rounded-lg border">
-                        <Image
-                          src={photo.url || "/placeholder.svg"}
-                          alt={photo.caption}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium">{photo.caption}</p>
-                        <p className="text-xs text-muted-foreground">{photo.date}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Section>
-            </TabsContent>
-
-            <TabsContent value="schedule" className="space-y-4">
-              <Section title="This Week's Schedule" description="Upcoming activities and events">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 p-3 rounded-lg border">
-                    <CalendarDays className="h-5 w-5 text-emerald-500" />
-                    <div className="flex-1">
-                      <div className="font-medium">Show and Tell</div>
-                      <div className="text-sm text-muted-foreground">Tomorrow, 10:00 AM</div>
-                    </div>
+                    <span className="text-xs text-neutral-500">10:30 AM</span>
                   </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg border">
-                    <Camera className="h-5 w-5 text-emerald-500" />
-                    <div className="flex-1">
-                      <div className="font-medium">Picture Day</div>
-                      <div className="text-sm text-muted-foreground">Friday, 9:00 AM</div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-full bg-teal-100 p-1.5 mt-0.5">
+                      <Utensils className="h-3 w-3 text-teal-600" />
                     </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Lunch Time</p>
+                      <p className="text-xs text-neutral-500">
+                        Ate most of her sandwich and all of her fruit. Tried new vegetables today!
+                      </p>
+                    </div>
+                    <span className="text-xs text-neutral-500">12:00 PM</span>
                   </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg border">
-                    <HeartPulse className="h-5 w-5 text-emerald-500" />
-                    <div className="flex-1">
-                      <div className="font-medium">Health Check</div>
-                      <div className="text-sm text-muted-foreground">Next Monday, 11:00 AM</div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-full bg-indigo-100 p-1.5 mt-0.5">
+                      <Moon className="h-3 w-3 text-indigo-600" />
                     </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Rest Time</p>
+                      <p className="text-xs text-neutral-500">
+                        Had a peaceful nap for 1.5 hours. Woke up refreshed and ready to play.
+                      </p>
+                    </div>
+                    <span className="text-xs text-neutral-500">1:00 PM</span>
                   </div>
                 </div>
-              </Section>
-            </TabsContent>
-          </Tabs>
+              </div>
+            </Section>
+
+            {/* Photos & Memories */}
+            <Section title="Today's Photos" description="Special moments captured throughout the day">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="relative group cursor-pointer">
+                    <img
+                      src={`/galerie.jpg`}
+                      alt={`Activity photo ${i}`}
+                      className="aspect-square rounded-lg object-cover transition-transform group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors" />
+                    <Camera className="absolute top-2 right-2 h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                ))}
+              </div>
+              <Button variant="outline" className="w-full mt-4 bg-transparent">
+                <Camera className="mr-2 h-4 w-4" />
+                View All Photos
+              </Button>
+            </Section>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Quick Actions */}
+            <Section title="Quick Actions">
+              <div className="space-y-3">
+                <Button className="w-full justify-start bg-transparent" variant="outline">
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  Message Teacher
+                </Button>
+                <Button className="w-full justify-start bg-transparent" variant="outline">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Schedule Meeting
+                </Button>
+                <Button className="w-full justify-start bg-transparent" variant="outline">
+                  <FileText className="mr-2 h-4 w-4" />
+                  View Reports
+                </Button>
+                <Button className="w-full justify-start bg-transparent" variant="outline">
+                  <User className="mr-2 h-4 w-4" />
+                  Update Profile
+                </Button>
+              </div>
+            </Section>
+
+            {/* Upcoming Events */}
+            <Section title="Upcoming Events">
+              <div className="space-y-3">
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-neutral-50">
+                  <div className="rounded-full bg-emerald-100 p-1.5 mt-0.5">
+                    <Calendar className="h-3 w-3 text-emerald-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Parent-Teacher Conference</p>
+                    <p className="text-xs text-neutral-500">Tomorrow, 3:00 PM</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-neutral-50">
+                  <div className="rounded-full bg-teal-100 p-1.5 mt-0.5">
+                    <Star className="h-3 w-3 text-teal-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Spring Festival</p>
+                    <p className="text-xs text-neutral-500">Friday, 10:00 AM</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-neutral-50">
+                  <div className="rounded-full bg-amber-100 p-1.5 mt-0.5">
+                    <Camera className="h-3 w-3 text-amber-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Picture Day</p>
+                    <p className="text-xs text-neutral-500">Next Monday</p>
+                  </div>
+                </div>
+              </div>
+            </Section>
+
+            {/* Teacher Contact */}
+            <Section title="Emma's Teacher">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  {/* <Avatar>
+                    <AvatarImage src="/teacher-woman.png" />
+                    <AvatarFallback>MS</AvatarFallback>
+                  </Avatar> */}
+                  <div>
+                    <p className="font-medium">Ms. Sarah Johnson</p>
+                    <p className="text-sm text-neutral-500">Lead Teacher</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
+                    <MessageCircle className="mr-2 h-3 w-3" />
+                    Send Message
+                  </Button>
+                  <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
+                    <Phone className="mr-2 h-3 w-3" />
+                    Call Teacher
+                  </Button>
+                </div>
+              </div>
+            </Section>
+
+            {/* Development Progress */}
+            <Section title="Development Progress">
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span>Social Skills</span>
+                    <span>85%</span>
+                  </div>
+                  <Progress value={85} className="h-2" />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span>Language Development</span>
+                    <span>78%</span>
+                  </div>
+                  <Progress value={78} className="h-2" />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span>Motor Skills</span>
+                    <span>92%</span>
+                  </div>
+                  <Progress value={92} className="h-2" />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span>Creative Expression</span>
+                    <span>88%</span>
+                  </div>
+                  <Progress value={88} className="h-2" />
+                </div>
+              </div>
+            </Section>
+          </div>
         </div>
-      </Require>
+      </div>
     </AppShell>
   )
 }

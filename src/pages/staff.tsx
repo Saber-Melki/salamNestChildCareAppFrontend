@@ -165,6 +165,14 @@ const STATUS_COLORS = {
   "on-leave": "bg-orange-100 text-orange-800",
 }
 
+const ROLE_POSITIONS = {
+  director: "Center Director",
+  teacher: "Lead Teacher",
+  assistant: "Assistant Teacher",
+  substitute: "Substitute Teacher",
+  admin: "Administrative Staff",
+}
+
 function AddStaffDialog() {
   const [open, setOpen] = React.useState(false)
   const [formData, setFormData] = React.useState({
@@ -277,7 +285,12 @@ function AddStaffDialog() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="role">Role *</Label>
-                  <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value: "director" | "teacher" | "assistant" | "substitute" | "admin") =>
+                      setFormData({ ...formData, role: value })
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
@@ -466,7 +479,12 @@ function EditStaffDialog({ staff }: { staff: StaffMember }) {
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-role">Role *</Label>
-                  <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value: "director" | "teacher" | "assistant" | "substitute" | "admin") =>
+                      setFormData({ ...formData, role: value })
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -483,7 +501,7 @@ function EditStaffDialog({ staff }: { staff: StaffMember }) {
                   <Label htmlFor="edit-status">Status *</Label>
                   <Select
                     value={formData.status}
-                    onValueChange={(value) => setFormData({ ...formData, status: value })}
+                    onValueChange={(value: "active" | "inactive" | "on-leave") => setFormData({ ...formData, status: value })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -634,7 +652,7 @@ function StaffDetailsDialog({ staff }: { staff: StaffMember }) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <img
-                  src="/teacher.png"
+                  src="/miss.jpeg"
                   alt="Teacher avatar"
                   width={40}
                   height={40}
@@ -683,6 +701,10 @@ function StaffDetailsDialog({ staff }: { staff: StaffMember }) {
                 <Award className="h-4 w-4 text-gray-400" />
                 <span className="text-sm">${staff.hourlyRate}/hour</span>
               </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-gray-400" />
+              <span className="text-sm">Position: {ROLE_POSITIONS[staff.role]}</span>
             </div>
           </div>
 
@@ -890,7 +912,7 @@ export default function Staff() {
                           <img
                             src={
                               // member.avatar ||
-                              "/teacher.png?height=32&width=32&text=" + member.firstName[0] + member.lastName[0] ||
+                              "/miss.jpeg?height=32&width=32&text=" + member.firstName[0] + member.lastName[0] ||
                               "/placeholder.svg"
                             }
                             alt={`${member.firstName} ${member.lastName}`}

@@ -1,6 +1,6 @@
 import React from "react"
 import ReactDOM from "react-dom/client"
-import { createBrowserRouter, RouterProvider } from "react-router-dom"
+import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom"
 import "./index.css"
 
 import App from "./routes/app"
@@ -18,15 +18,19 @@ import Staff from "./pages/staff"
 import Settings from "./pages/settings"
 import Login from "./pages/login"
 import Logout from "./pages/logout"
+import ParentPortal from "./pages/parent-portal"
+import UserManagement from "./pages/user-management"
 
 const router = createBrowserRouter([
+  // Redirection par défaut vers login
+  { path: "/", element: <Navigate to="/login" replace /> },
   { path: "/login", element: <Login /> },
-  { path: "/logout", element: <Logout /> },
+  { path: "/logout", element: <Navigate to="/login" replace /> }, // logout redirige vers login
   {
     path: "/",
     element: <App />,
     children: [
-      { index: true, element: <Dashboard /> },
+      { path: "dashboard", element: <Dashboard /> },
       { path: "attendance", element: <Attendance /> },
       { path: "children", element: <Children /> },
       { path: "health", element: <Health /> },
@@ -37,6 +41,8 @@ const router = createBrowserRouter([
       { path: "reports", element: <Reports /> },
       { path: "calendar", element: <Calendar /> },
       { path: "staff", element: <Staff /> },
+      { path: "parent-portal", element: <ParentPortal /> },
+      { path: "user-management", element: <UserManagement /> },
       { path: "settings", element: <Settings /> },
     ],
   },

@@ -4,7 +4,7 @@ import { BrandingProvider } from "../contexts/branding"
 import { RBACProvider } from "../contexts/rbac"
 // import { AppShell } from "../components/app-shell"
 
-function Protected({ children }: { children: React.ReactNode }) {
+function publicRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation()
   const authed = Boolean(localStorage.getItem("auth:session"))
   if (!authed && location.pathname !== "/login") {
@@ -18,9 +18,7 @@ export default function App() {
     
     <BrandingProvider>
         <RBACProvider>
-          <Protected>
             <Outlet />
-          </Protected>
         </RBACProvider>
     </BrandingProvider>
   )

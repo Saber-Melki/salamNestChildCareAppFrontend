@@ -1,133 +1,60 @@
-import { ApiClient, type ApiResponse } from "./api-client"
-import { MicroservicesConfig } from "./microservices-config"
+import { apiClient } from "./api-client"
 
-export interface LoginCredentials {
-  email: string
-  password: string
-  role?: "admin" | "staff" | "parent"
-}
-
-export interface AuthUser {
+export interface User {
   id: string
   email: string
   firstName: string
   lastName: string
   role: "admin" | "staff" | "parent"
   permissions: string[]
-  tenantId?: string
 }
 
-export interface AuthResponse {
-  user: AuthUser
-  accessToken: string
-  refreshToken: string
-  expiresIn: number
+export interface LoginCredentials {
+  email: string
+  password: string
 }
 
-export interface RefreshTokenRequest {
-  refreshToken: string
+export interface RegisterData {
+  email: string
+  password: string
+  firstName: string
+  lastName: string
+  role: "staff" | "parent"
 }
 
-export class AuthService {
-  private apiClient: ApiClient
-  private static instance: AuthService
-
-  private constructor() {
-    const config = MicroservicesConfig.getInstance()
-    this.apiClient = new ApiClient({
-      baseURL: config.getEndpoint("auth"),
-      timeout: 15000,
-    })
-  }
-
-  static getInstance(): AuthService {
-    if (!AuthService.instance) {
-      AuthService.instance = new AuthService()
-    }
-    return AuthService.instance
-  }
-
-  async login(credentials: LoginCredentials): Promise<ApiResponse<AuthResponse>> {
-    const response = await this.apiClient.post<AuthResponse>("/auth/login", credentials)
-
-    // Store tokens in localStorage
-    if (response.data.accessToken) {
-      localStorage.setItem("accessToken", response.data.accessToken)
-      localStorage.setItem("refreshToken", response.data.refreshToken)
-      localStorage.setItem("user", JSON.stringify(response.data.user))
-
-      // Set auth token for future requests
-      this.apiClient.setAuthToken(response.data.accessToken)
-    }
-
-    return response
+class AuthService {
+  async login(credentials: LoginCredentials): Promise<User> {
+    const tokens = await apiClient.login(credentials.email, credentials.password)
+    const user = await this.getCurrentUser()
+    return user
   }
 
   async logout(): Promise<void> {
-    try {
-      await this.apiClient.post("/auth/logout")
-    } catch (error) {
-      console.warn("Logout request failed:", error)
-    } finally {
-      // Clear local storage regardless of API response
-      localStorage.removeItem("accessToken")
-      localStorage.removeItem("refreshToken")
-      localStorage.removeItem("user")
-      this.apiClient.clearAuthToken()
-    }
+    await apiClient.logout()
+    // Clear any additional user data from localStorage
+    localStorage.removeItem("auth:session")
+    localStorage.removeItem("user:role")
   }
 
-  async refreshToken(): Promise<ApiResponse<AuthResponse>> {
-    const refreshToken = localStorage.getItem("refreshToken")
-    if (!refreshToken) {
-      throw new Error("No refresh token available")
-    }
-
-    const response = await this.apiClient.post<AuthResponse>("/auth/refresh", {
-      refreshToken,
-    })
-
-    // Update stored tokens
-    if (response.data.accessToken) {
-      localStorage.setItem("accessToken", response.data.accessToken)
-      localStorage.setItem("refreshToken", response.data.refreshToken)
-      localStorage.setItem("user", JSON.stringify(response.data.user))
-
-      this.apiClient.setAuthToken(response.data.accessToken)
-    }
-
-    return response
+  async getCurrentUser(): Promise<User> {
+    return apiClient.get<User>("/auth/me")
   }
 
-  async getCurrentUser(): Promise<AuthUser | null> {
-    const userStr = localStorage.getItem("user")
-    if (!userStr) return null
-
-    try {
-      return JSON.parse(userStr)
-    } catch {
-      return null
-    }
+  async register(data: RegisterData): Promise<User> {
+    return apiClient.post<User>("/auth/register", data)
   }
 
-  async validateToken(): Promise<boolean> {
-    const token = localStorage.getItem("accessToken")
-    if (!token) return false
+  async forgotPassword(email: string): Promise<void> {
+    await apiClient.post("/auth/forgot-password", { email })
+  }
 
-    try {
-      this.apiClient.setAuthToken(token)
-      await this.apiClient.get("/auth/validate")
-      return true
-    } catch {
-      return false
-    }
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    await apiClient.post("/auth/reset-password", { token, newPassword })
   }
 
   isAuthenticated(): boolean {
-    return !!localStorage.getItem("accessToken")
-  }
-
-  getAuthToken(): string | null {
-    return localStorage.getItem("accessToken")
+    return apiClient.isAuthenticated()
   }
 }
+
+export const authService = new AuthService()

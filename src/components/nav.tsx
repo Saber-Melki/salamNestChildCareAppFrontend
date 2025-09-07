@@ -30,7 +30,7 @@ export type NavItem = {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", href: "/", icon: Home, permission: "view:dashboard", section: "Overview" },
+  { label: "Dashboard", href: "/dashboard", icon: Home, permission: "view:dashboard", section: "Overview" },
 
   {
     label: "Attendance",

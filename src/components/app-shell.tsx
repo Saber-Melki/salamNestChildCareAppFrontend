@@ -21,6 +21,8 @@ import {
   FileText,
   CalendarDays,
   Settings,
+  UserCog,
+  DoorOpen,
 } from "lucide-react"
 import { Button } from "./ui/button"
 import { Card } from "./ui/card"
@@ -91,6 +93,8 @@ const NAV_ITEMS = [
   { label: "Media", href: "/media", icon: Camera, permission: "view:media", section: "Engagement" },
   { label: "Reports", href: "/reports", icon: FileText, permission: "view:reports", section: "Insights" },
   { label: "Calendar", href: "/calendar", icon: CalendarDays, permission: "manage:calendar", section: "Insights" },
+  // { label: "User Management", href: "/user-management", icon: UserCog, permission: "manage:users", section: "System"},
+  { label: "Parent Portal", href: "/parent-portal", icon: DoorOpen, permission: "view:parent-portal", section: "System" },
   { label: "Staff", href: "/staff", icon: Users, permission: "manage:settings", section: "System" },
   { label: "Settings", href: "/settings", icon: Settings, permission: "manage:settings", section: "System" },
 ]

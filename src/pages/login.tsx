@@ -24,7 +24,7 @@ function AuroraBG() {
 
 function LoginScreen() {
   const nav = useNavigate()
-  const { name, logoUrl, accent } = useBranding()
+  const { accent } = useBranding()
   const theme = getAccentTheme(accent)
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
@@ -32,12 +32,37 @@ function LoginScreen() {
   const [role, setRole] = React.useState<Role>("admin")
   const [pending, setPending] = React.useState(false)
 
+  // 🔹 Login en se basant uniquement sur le cookie
   const login = async (r?: Role) => {
     setPending(true)
     try {
-      localStorage.setItem("auth:session", "demo-session")
-      localStorage.setItem("role", r || role)
-      nav("/", { replace: true })
+      const response = await fetch("http://localhost:8080/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // très important pour envoyer/recevoir les cookies
+        body: JSON.stringify({
+          email,
+          password,
+          role: r || role,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Invalid credentials")
+      }
+
+      const data = await response.json()
+      console.log("✅ Login response:", data)
+      console.log("🎉 Login successful, cookies should now be set by backend")
+
+      console.log("✅ Login successful, redirecting...");
+      // Redirect to dashboard after login
+      nav("/dashboard", { replace: true })
+      console.log("➡️ Navigation triggered");
+
+    } catch (err: any) {
+      console.error("❌ Login failed:", err)
+      alert("Login failed: " + err.message)
     } finally {
       setPending(false)
     }
@@ -181,52 +206,52 @@ function LoginScreen() {
                     <p className="text-gray-600 mt-2">Sign in to your childcare dashboard</p>
                   </div>
 
-                  <form
-                    className="space-y-6"
-                    onSubmit={(e) => {
-                      e.preventDefault()
-                      login()
-                    }}
-                  >
+      <form
+        className="space-y-6"
+        onSubmit={(e) => {
+          e.preventDefault()
+          login()
+        }}
+      >
                     {/* Email field with floating label effect */}
-                    <div className="relative group">
+        <div className="relative group">
                       <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-lime-400/20 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity blur-sm" />
                       <div className="relative">
                         <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
-                        <Input
-                          id="email"
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="Enter your email"
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email"
                           className="pl-12 h-12 bg-white/50 backdrop-blur border-white/30 focus:border-emerald-500/50 focus:ring-emerald-500/20"
-                          required
-                        />
+            required
+          />
                       </div>
-                    </div>
+        </div>
 
                     {/* Password field */}
-                    <div className="relative group">
+        <div className="relative group">
                       <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/20 to-fuchsia-400/20 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity blur-sm" />
                       <div className="relative">
                         <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-violet-500 transition-colors" />
-                        <Input
-                          id="password"
-                          type={showPw ? "text" : "password"}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="Enter your password"
+          <Input
+            id="password"
+            type={showPw ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password"
                           className="pl-12 pr-12 h-12 bg-white/50 backdrop-blur border-white/30 focus:border-violet-500/50 focus:ring-violet-500/20"
-                          required
+            required
                           minLength={4}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPw((s) => !s)}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPw((s) => !s)}
                           className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                        >
-                          {showPw ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                        </button>
+          >
+            {showPw ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+          </button>
                       </div>
                     </div>
 
@@ -284,11 +309,11 @@ function LoginScreen() {
                           )
                         })}
                       </div>
-                    </div>
+        </div>
 
                     {/* Enhanced sign in button */}
-                    <Button
-                      type="submit"
+        <Button
+          type="submit"
                       className={cn(
                         "w-full h-12 text-white font-semibold shadow-xl transition-all duration-300",
                         "bg-gradient-to-r border-0 relative overflow-hidden group",
@@ -296,7 +321,7 @@ function LoginScreen() {
                         theme.gradTo,
                         "hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98]",
                       )}
-                      disabled={pending}
+          disabled={pending}
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                       <div className="relative flex items-center justify-center gap-2">
@@ -312,34 +337,9 @@ function LoginScreen() {
                           </>
                         )}
                       </div>
-                    </Button>
-                  </form>
+        </Button>
+      </form>
 
-                  {/* Quick access buttons */}
-                  <div className="mt-8 pt-6 border-t border-white/20">
-                    <p className="text-center text-sm text-gray-600 mb-4">Quick access</p>
-                    <div className="grid grid-cols-3 gap-3">
-                      {[
-                        { role: "admin", icon: Settings, label: "Admin", color: "emerald" },
-                        { role: "staff", icon: Users, label: "Staff", color: "violet" },
-                        { role: "parent", icon: User, label: "Parent", color: "rose" },
-                      ].map((item) => {
-                        const Icon = item.icon
-                        return (
-                          <Button
-                            key={item.role}
-                            variant="outline"
-                            size="sm"
-                            className="bg-white/30 backdrop-blur border-white/40 hover:bg-white/50 transition-all duration-200 hover:scale-105"
-                            onClick={() => login(item.role as Role)}
-                          >
-                            <Icon className="mr-2 h-4 w-4" />
-                            {item.label}
-                          </Button>
-                        )
-                      })}
-                    </div>
-                  </div>
 
                   {/* Footer */}
                   <div className="mt-6 text-center">
@@ -381,4 +381,3 @@ export default function Login() {
     </BrandingProvider>
   )
 }
-
