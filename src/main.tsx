@@ -22,14 +22,16 @@ import ParentPortal from "./pages/parent-portal"
 import UserManagement from "./pages/user-management"
 
 const router = createBrowserRouter([
-  // Redirection par défaut vers login
-  { path: "/", element: <Navigate to="/login" replace /> },
+  // Routes publiques
   { path: "/login", element: <Login /> },
-  { path: "/logout", element: <Navigate to="/login" replace /> }, // logout redirige vers login
+  { path: "/logout", element: <Navigate to="/login" replace /> },
+
+  // Routes privées (dans App)
   {
     path: "/",
     element: <App />,
     children: [
+      { index: true, element: <Navigate to="/login" replace /> }, // redirection par défaut vers login
       { path: "dashboard", element: <Dashboard /> },
       { path: "attendance", element: <Attendance /> },
       { path: "children", element: <Children /> },
@@ -47,6 +49,7 @@ const router = createBrowserRouter([
     ],
   },
 ])
+
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

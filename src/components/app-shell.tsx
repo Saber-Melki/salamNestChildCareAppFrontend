@@ -23,6 +23,7 @@ import {
   Settings,
   UserCog,
   DoorOpen,
+  CalendarCheck2,
 } from "lucide-react"
 import { Button } from "./ui/button"
 import { Card } from "./ui/card"
@@ -85,7 +86,7 @@ const NAV_ITEMS = [
   {
     label: "Scheduling",
     href: "/scheduling",
-    icon: CheckSquare,
+    icon: CalendarCheck2,
     permission: "manage:scheduling",
     section: "Operations",
   },

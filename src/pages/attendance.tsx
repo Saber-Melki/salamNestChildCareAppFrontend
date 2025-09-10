@@ -1,12 +1,13 @@
 "use client"
 
-import React from "react"
+import React, { useEffect, useState } from "react"
 import { AppShell, Section } from "../components/app-shell"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table"
 import { Badge } from "../components/ui/badge"
+import { CheckSquare } from "lucide-react"
 
 type RecordT = {
   id: string
@@ -18,34 +19,83 @@ type RecordT = {
 }
 
 export default function Attendance() {
-  const [rows, setRows] = React.useState<RecordT[]>([
-    { id: "1", name: "Inyaz Zaiem", group: "Sunflowers", status: "present", checkIn: "08:12" },
-    { id: "2", name: "Haroun Said", group: "Sunflowers", status: "away", checkIn: "09:01", checkOut: "11:05" },
-    { id: "3", name: "Maya Ouni", group: "Butterflies", status: "present", checkIn: "08:43" },
-    { id: "4", name: "Joud Limem", group: "Butterflies", status: "away", checkIn: "08:30", checkOut: "10:15" },
-    
-  ])
-  const [filter, setFilter] = React.useState("")
+  const [rows, setRows] = useState<RecordT[]>([])
+  const [filter, setFilter] = useState("")
 
-  const onCheck = (id: string, type: "in" | "out") => {
-    setRows((prev) =>
-      prev.map((r) => {
-        if (r.id !== id) return r
-        const now = new Date()
-        const time = now.toTimeString().slice(0, 5)
-        return type === "in"
-          ? { ...r, status: "present", checkIn: time, checkOut: undefined }
-          : { ...r, status: "away", checkOut: time }
-      }),
-    )
+  // === Fetch all attendances from gateway ===
+  const fetchAttendances = async () => {
+    try {
+      const res = await fetch("http://localhost:8080/attendance") // API Gateway
+      const data = await res.json()
+      setRows(data)
+    } catch (err) {
+      console.error("Failed to fetch attendance", err)
+    }
   }
 
-  const visible = rows.filter((r) => r.name.toLowerCase().includes(filter.toLowerCase()))
+  useEffect(() => {
+    fetchAttendances()
+  }, [])
+
+  // === Handle check-in/out ===
+  const onCheck = async (id: string, type: "in" | "out") => {
+    try {
+      const now = new Date()
+      const time = now.toTimeString().slice(0, 5)
+
+      const updated = {
+        status: type === "in" ? "present" : "away",
+        checkIn: type === "in" ? time : undefined,
+        checkOut: type === "out" ? time : undefined,
+      }
+
+      await fetch(`http://localhost:8080/attendance/${id}`, {
+        method: "POST", // correspond à update_attendance dans gateway
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated),
+      })
+
+      // recharger les données
+      fetchAttendances()
+    } catch (err) {
+      console.error("Failed to update attendance", err)
+    }
+  }
+
+  const visible = rows.filter((r) =>
+    r.name.toLowerCase().includes(filter.toLowerCase())
+  )
 
   return (
     <AppShell title="Attendance Tracking">
+      <div className="relative overflow-hidden rounded-2xl border shadow-sm">
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-400 opacity-90" />
+        <div className="relative p-6 md:p-8 text-white">
+          <div className="flex items-start gap-3">
+            <div className="inline-flex h-10 w-10 items-center justify-center bg-white/20 backdrop-blur-md rounded-lg shadow-md">
+              <CheckSquare className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-semibold leading-tight">
+                Attendance Tracking
+              </h1>
+              <p className="mt-1 text-white/90">
+                Track children's attendance with ease.
+                <br />
+                Quickly check children in and out with precise timestamps.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <br />
+
       <div className="space-y-6">
-        <Section title="Check-in / Check-out" description="Record attendance for children with precise timestamps.">
+        <Section
+          title="Check-in / Check-out"
+          description="Record attendance for children with precise timestamps."
+        >
           <div className="flex items-end gap-3">
             <div className="space-y-1">
               <Label htmlFor="search">Search</Label>
@@ -58,6 +108,7 @@ export default function Attendance() {
             </div>
             <Button className="ml-auto">Print Daily Roster</Button>
           </div>
+
           <div className="mt-4 rounded-xl border bg-white/70 overflow-x-auto">
             <Table>
               <TableHeader>
@@ -85,10 +136,17 @@ export default function Attendance() {
                     <TableCell>{r.checkIn || "-"}</TableCell>
                     <TableCell>{r.checkOut || "-"}</TableCell>
                     <TableCell className="space-x-2">
-                      <Button size="sm" variant="outline" onClick={() => onCheck(r.id, "in")}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onCheck(r.id, "in")}
+                      >
                         Check-in
                       </Button>
-                      <Button size="sm" onClick={() => onCheck(r.id, "out")}>
+                      <Button
+                        size="sm"
+                        onClick={() => onCheck(r.id, "out")}
+                      >
                         Check-out
                       </Button>
                     </TableCell>
