@@ -24,6 +24,7 @@ import {
   UserCog,
   DoorOpen,
   CalendarCheck2,
+  Baby,
 } from "lucide-react"
 import { Button } from "./ui/button"
 import { Card } from "./ui/card"
@@ -73,6 +74,8 @@ function useCollapsedSidebar() {
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/", icon: Home, permission: "view:dashboard", section: "Overview" },
+  { label: "Parent Portal", href: "/parent-portal", icon: DoorOpen, permission: "view:parent-portal", section: "Overview" },
+
   {
     label: "Attendance",
     href: "/attendance",
@@ -80,7 +83,7 @@ const NAV_ITEMS = [
     permission: "manage:attendance",
     section: "Operations",
   },
-  { label: "Children", href: "/children", icon: Users, permission: "manage:children", section: "Operations" },
+  { label: "Children", href: "/children", icon: Baby, permission: "manage:children", section: "Operations" },
   { label: "Health", href: "/health", icon: HeartPulse, permission: "manage:health", section: "Operations" },
   { label: "Billing", href: "/billing", icon: Wallet, permission: "manage:billing", section: "Operations" },
   {
@@ -94,14 +97,15 @@ const NAV_ITEMS = [
   { label: "Media", href: "/media", icon: Camera, permission: "view:media", section: "Engagement" },
   { label: "Reports", href: "/reports", icon: FileText, permission: "view:reports", section: "Insights" },
   { label: "Calendar", href: "/calendar", icon: CalendarDays, permission: "manage:calendar", section: "Insights" },
-  // { label: "User Management", href: "/user-management", icon: UserCog, permission: "manage:users", section: "System"},
-  { label: "Parent Portal", href: "/parent-portal", icon: DoorOpen, permission: "view:parent-portal", section: "System" },
+  { label: "Bookings", href: "/booking", icon: Plus, permission: "manage:bookings", section: "Insights" },
+  { label: "AI Assistant", href: "/ai-assistant", icon: Sparkles, permission: "view:ai-assistant", section: "Insights" },
+  { label: "User Management", href: "/user-management", icon: UserCog, permission: "manage:users", section: "System"},
   { label: "Staff", href: "/staff", icon: Users, permission: "manage:settings", section: "System" },
   { label: "Settings", href: "/settings", icon: Settings, permission: "manage:settings", section: "System" },
 ]
 
 function BrandHeader({ collapsed }: { collapsed: boolean }) {
-  const { name, logoUrl, accent } = useBranding()
+  const { accent } = useBranding()
   const theme = getAccentTheme(accent)
   return (
     <div className="relative p-3">
@@ -220,7 +224,7 @@ function DesktopSidebar() {
 function Header({ title }: { title?: string }) {
   const navigate = useNavigate()
   const { role, setRole } = useRBAC()
-  const { name, setName, accent, setAccent } = useBranding()
+  const { accent } = useBranding()
   const theme = getAccentTheme(accent)
   const [q, setQ] = React.useState("")
 
@@ -252,16 +256,17 @@ function Header({ title }: { title?: string }) {
           />
         </div>
         <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="sr-only">Notifications</span>
-          <span className={cn("absolute -top-0.5 -right-0.5 inline-flex h-2 w-2 rounded-full", theme.dot)} />
-        </Button>
+  <Bell className="h-5 w-5" />
+  <span className="sr-only">Notifications</span>
+</Button>
 
-        <div className="hidden lg:flex items-center gap-2 ml-2">
-          <RoleButton r="admin" label="Admin" />
-          <RoleButton r="staff" label="Staff" />
-          <RoleButton r="parent" label="Parent" />
-        </div>
+
+
+<div className="hidden lg:flex items-center gap-2 ml-2">
+  <RoleButton r="admin" label="Admin" />
+  <RoleButton r="staff" label="Staff" />
+  <RoleButton r="parent" label="Parent" />
+</div>
 
         <Button
           variant="outline"
@@ -273,6 +278,7 @@ function Header({ title }: { title?: string }) {
           <CircleUserRound className="h-5 w-5" />
           Sign out
         </Button>
+
       </div>
     </header>
   )

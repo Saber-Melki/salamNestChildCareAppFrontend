@@ -1,6 +1,7 @@
 // services/health.ts
 
 export type HealthNote = {
+  childId: string;
   id: string;
   child: string;
   noteType: string;
@@ -66,3 +67,7 @@ export const deleteHealthNote = async (id: string): Promise<boolean> => {
   if (!res.ok) throw new Error("Failed to delete health note");
   return true;
 };
+export function createHealthRecord(newRecord: HealthRecord): HealthRecord | PromiseLike<HealthRecord | undefined> | undefined {
+  throw new Error("Function not implemented.");
+}
+

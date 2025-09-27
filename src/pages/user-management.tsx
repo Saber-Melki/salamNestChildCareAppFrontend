@@ -21,8 +21,7 @@ import {
 } from "../components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
 import { useRBAC } from "../contexts/rbac"
-import { useI18n } from "../contexts/i18n"
-import { cn } from "../lib/utils"
+import { cn } from "../lib/utils" // Assuming 'cn' correctly handles conditional classes including RTL adjustments if needed
 import {
   Plus,
   Search,
@@ -48,6 +47,7 @@ import {
   Key,
   Lock,
   Unlock,
+  User,
 } from "lucide-react"
 
 interface UserManagementUser {
@@ -150,24 +150,6 @@ const INITIAL_USERS: UserManagementUser[] = [
     isVerified: false,
     loginAttempts: 0,
   },
-  {
-    id: "5",
-    firstName: "David",
-    lastName: "Miller",
-    email: "david.miller@childcare.com",
-    phone: "(555) 567-8901",
-    role: "staff",
-    status: "suspended",
-    createdDate: "2023-06-15",
-    lastLogin: "2024-01-05T12:00:00Z",
-    address: "654 Maple Ave, City, State 12345",
-    department: "Kitchen",
-    permissions: ["view:children"],
-    notes: "Suspended pending investigation",
-    avatar: "/placeholder.svg?height=40&width=40&text=DM",
-    isVerified: true,
-    loginAttempts: 3,
-  },
 ]
 
 const ROLE_COLORS = {
@@ -191,7 +173,6 @@ const ROLE_ICONS = {
 
 function AddUserDialog() {
   const [open, setOpen] = React.useState(false)
-  const { t, isRTL } = useI18n()
   const [formData, setFormData] = React.useState<{
     firstName: string
     lastName: string
@@ -243,7 +224,7 @@ function AddUserDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className={cn("gap-2", isRTL && "flex-row-reverse")}>
+        <Button className="gap-2"> {/* Removed flex-row-reverse from here, as Plus should be on the left */}
           <Plus className="h-4 w-4" />
           Add New User
         </Button>
@@ -321,19 +302,22 @@ function AddUserDialog() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="admin">
-                        <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
+                        {/* Adjusted to keep icon on left for LTR display */}
+                        <div className="flex items-center gap-2"> 
                           <Settings className="h-4 w-4" />
                           Administrator
                         </div>
                       </SelectItem>
                       <SelectItem value="staff">
-                        <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
+                        {/* Adjusted to keep icon on left for LTR display */}
+                        <div className="flex items-center gap-2"> 
                           <GraduationCap className="h-4 w-4" />
                           Staff Member
                         </div>
                       </SelectItem>
                       <SelectItem value="parent">
-                        <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
+                        {/* Adjusted to keep icon on left for LTR display */}
+                        <div className="flex items-center gap-2"> 
                           <Baby className="h-4 w-4" />
                           Parent/Guardian
                         </div>
@@ -412,7 +396,8 @@ function AddUserDialog() {
             {/* Options */}
             <div className="space-y-4">
               <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Options</h3>
-              <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
+              {/* Removed flex-row-reverse, checkbox should be on the left for LTR */}
+              <div className="flex items-center gap-2"> 
                 <input
                   type="checkbox"
                   id="sendWelcomeEmail"
@@ -438,7 +423,6 @@ function AddUserDialog() {
 
 function EditUserDialog({ user }: { user: UserManagementUser }) {
   const [open, setOpen] = React.useState(false)
-  const { isRTL } = useI18n()
   const [formData, setFormData] = React.useState({
     firstName: user.firstName,
     lastName: user.lastName,
@@ -646,7 +630,6 @@ function EditUserDialog({ user }: { user: UserManagementUser }) {
 
 function UserDetailsDialog({ user }: { user: UserManagementUser }) {
   const [open, setOpen] = React.useState(false)
-  const { isRTL } = useI18n()
   const RoleIcon = ROLE_ICONS[user.role]
 
   return (
@@ -658,7 +641,7 @@ function UserDetailsDialog({ user }: { user: UserManagementUser }) {
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
+          <DialogTitle className="flex items-center gap-3"> {/* Removed flex-row-reverse */}
             <img
               src={user.avatar || "/placeholder.svg?height=40&width=40&text=" + user.firstName[0] + user.lastName[0]}
               alt={`${user.firstName} ${user.lastName}`}
@@ -671,9 +654,9 @@ function UserDetailsDialog({ user }: { user: UserManagementUser }) {
         </DialogHeader>
         <DialogBody className="space-y-6">
           {/* Status and Role */}
-          <div className={cn("flex items-center gap-4", isRTL && "flex-row-reverse")}>
+          <div className="flex items-center gap-4"> {/* Removed flex-row-reverse */}
             <Badge className={ROLE_COLORS[user.role]}>
-              <RoleIcon className={cn("h-3 w-3", isRTL ? "ml-1" : "mr-1")} />
+              <RoleIcon className="h-3 w-3 mr-1" /> {/* Adjusted to mr-1 for LTR icon spacing */}
               {user.role}
             </Badge>
             <Badge className={STATUS_COLORS[user.status]}>{user.status}</Badge>
@@ -687,7 +670,7 @@ function UserDetailsDialog({ user }: { user: UserManagementUser }) {
           <div className="space-y-3">
             <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Account Security</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
+              <div className="flex items-center gap-2"> {/* Removed flex-row-reverse */}
                 {user.isVerified ? (
                   <Shield className="h-4 w-4 text-green-500" />
                 ) : (
@@ -695,7 +678,7 @@ function UserDetailsDialog({ user }: { user: UserManagementUser }) {
                 )}
                 <span className="text-sm">{user.isVerified ? "Verified" : "Unverified"}</span>
               </div>
-              <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
+              <div className="flex items-center gap-2"> {/* Removed flex-row-reverse */}
                 {user.loginAttempts > 0 ? (
                   <Lock className="h-4 w-4 text-red-500" />
                 ) : (
@@ -710,16 +693,16 @@ function UserDetailsDialog({ user }: { user: UserManagementUser }) {
           <div className="space-y-3">
             <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Contact Information</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
+              <div className="flex items-center gap-2"> {/* Removed flex-row-reverse */}
                 <Mail className="h-4 w-4 text-gray-400" />
                 <span className="text-sm">{user.email}</span>
               </div>
-              <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
+              <div className="flex items-center gap-2"> {/* Removed flex-row-reverse */}
                 <Phone className="h-4 w-4 text-gray-400" />
                 <span className="text-sm">{user.phone}</span>
               </div>
             </div>
-            <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
+            <div className="flex items-center gap-2"> {/* Removed flex-row-reverse */}
               <MapPin className="h-4 w-4 text-gray-400" />
               <span className="text-sm">{user.address}</span>
             </div>
@@ -729,7 +712,7 @@ function UserDetailsDialog({ user }: { user: UserManagementUser }) {
           {user.role === "staff" && user.department && (
             <div className="space-y-3">
               <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Employment Details</h3>
-              <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
+              <div className="flex items-center gap-2"> {/* Removed flex-row-reverse */}
                 <Building className="h-4 w-4 text-gray-400" />
                 <span className="text-sm">{user.department}</span>
               </div>
@@ -739,7 +722,7 @@ function UserDetailsDialog({ user }: { user: UserManagementUser }) {
           {user.role === "parent" && user.children && (
             <div className="space-y-3">
               <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Children</h3>
-              <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
+              <div className="flex items-center gap-2"> {/* Removed flex-row-reverse */}
                 <Baby className="h-4 w-4 text-gray-400" />
                 <span className="text-sm">{user.children.length} child(ren) enrolled</span>
               </div>
@@ -892,7 +875,6 @@ function ResetPasswordDialog({ user }: { user: UserManagementUser }) {
 
 export default function UserManagement() {
   const { can } = useRBAC()
-  const { isRTL } = useI18n()
   const [users, setUsers] = React.useState<UserManagementUser[]>(INITIAL_USERS)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [roleFilter, setRoleFilter] = React.useState<string>("all")
@@ -933,7 +915,7 @@ export default function UserManagement() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="p-4">
-            <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
+            <div className={cn("flex items-center gap-3")}>
               <div className="p-2 bg-blue-100 rounded-lg">
                 <Users className="h-5 w-5 text-blue-600" />
               </div>
@@ -944,7 +926,7 @@ export default function UserManagement() {
             </div>
           </Card>
           <Card className="p-4">
-            <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
+            <div className={cn("flex items-center gap-3")}>
               <div className="p-2 bg-green-100 rounded-lg">
                 <UserCheck className="h-5 w-5 text-green-600" />
               </div>
@@ -955,7 +937,7 @@ export default function UserManagement() {
             </div>
           </Card>
           <Card className="p-4">
-            <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
+            <div className={cn("flex items-center gap-3")}>
               <div className="p-2 bg-yellow-100 rounded-lg">
                 <Clock className="h-5 w-5 text-yellow-600" />
               </div>
@@ -966,7 +948,7 @@ export default function UserManagement() {
             </div>
           </Card>
           <Card className="p-4">
-            <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
+            <div className={cn("flex items-center gap-3")}>
               <div className="p-2 bg-red-100 rounded-lg">
                 <UserX className="h-5 w-5 text-red-600" />
               </div>
@@ -987,14 +969,14 @@ export default function UserManagement() {
                 <Search
                   className={cn(
                     "absolute top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400",
-                    isRTL ? "right-3" : "left-3",
+                     "right-3",
                   )}
                 />
                 <Input
                   placeholder="Search users by name or email..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className={cn(isRTL ? "pr-10" : "pl-10")}
+                  className={cn("pl-10")}
                 />
               </div>
               <div className="flex gap-2">
@@ -1026,15 +1008,15 @@ export default function UserManagement() {
             </div>
 
             {/* Action Buttons */}
-            <div className={cn("flex justify-between items-center", isRTL && "flex-row-reverse")}>
+            <div className={cn("flex justify-between items-center")}>
               <div className="flex gap-2">
                 <AddUserDialog />
-                <Button variant="outline" className={cn("gap-2 bg-transparent", isRTL && "flex-row-reverse")}>
+                <Button variant="outline" className={cn("gap-2 bg-transparent")}>
                   <Upload className="h-4 w-4" />
                   Import Users
                 </Button>
               </div>
-              <Button variant="outline" className={cn("gap-2 bg-transparent", isRTL && "flex-row-reverse")}>
+              <Button variant="outline" className={cn("gap-2 bg-transparent")}>
                 <Download className="h-4 w-4" />
                 Export Users
               </Button>
@@ -1059,17 +1041,9 @@ export default function UserManagement() {
                     return (
                       <TableRow key={user.id}>
                         <TableCell>
-                          <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
+                          <div className={cn("flex items-center gap-3")}>
                             <div className="relative">
-                              <img
-                                src={
-                                  user.avatar ||
-                                  "/placeholder.svg?height=32&width=32&text=" + user.firstName[0] + user.lastName[0] ||
-                                  "/placeholder.svg"
-                                }
-                                alt={`${user.firstName} ${user.lastName}`}
-                                className="h-8 w-8 rounded-full"
-                              />
+                              <User/>
                               {!user.isVerified && (
                                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full border border-white" />
                               )}
@@ -1084,7 +1058,7 @@ export default function UserManagement() {
                         </TableCell>
                         <TableCell>
                           <Badge className={ROLE_COLORS[user.role]}>
-                            <RoleIcon className={cn("h-3 w-3", isRTL ? "ml-1" : "mr-1")} />
+                            <RoleIcon className={cn("h-3 w-3")} />
                             {user.role}
                           </Badge>
                         </TableCell>
@@ -1093,11 +1067,11 @@ export default function UserManagement() {
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            <div className={cn("flex items-center gap-1", isRTL && "flex-row-reverse")}>
+                            <div className={cn("flex items-center gap-1")}>
                               <Phone className="h-3 w-3 text-gray-400" />
                               {user.phone}
                             </div>
-                            <div className={cn("flex items-center gap-1 text-gray-500", isRTL && "flex-row-reverse")}>
+                            <div className={cn("flex items-center gap-1 text-gray-500")}>
                               <Mail className="h-3 w-3 text-gray-400" />
                               {user.email}
                             </div>

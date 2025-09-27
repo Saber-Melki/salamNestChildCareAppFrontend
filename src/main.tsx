@@ -17,9 +17,10 @@ import Calendar from "./pages/calendar"
 import Staff from "./pages/staff"
 import Settings from "./pages/settings"
 import Login from "./pages/login"
-import Logout from "./pages/logout"
 import ParentPortal from "./pages/parent-portal"
 import UserManagement from "./pages/user-management"
+import { RBACProvider } from "./contexts/rbac"
+import Booking from "./pages/booking"
 
 const router = createBrowserRouter([
   // Routes publiques
@@ -42,10 +43,12 @@ const router = createBrowserRouter([
       { path: "media", element: <Media /> },
       { path: "reports", element: <Reports /> },
       { path: "calendar", element: <Calendar /> },
+      { path: "booking", element: <Booking /> },
       { path: "staff", element: <Staff /> },
       { path: "parent-portal", element: <ParentPortal /> },
       { path: "user-management", element: <UserManagement /> },
       { path: "settings", element: <Settings /> },
+      
     ],
   },
 ])
@@ -53,6 +56,8 @@ const router = createBrowserRouter([
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
-  </React.StrictMode>,
+    <RBACProvider>
+      <RouterProvider router={router} />
+    </RBACProvider>
+  </React.StrictMode>
 )

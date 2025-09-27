@@ -1,50 +1,43 @@
+// services/attendance.service.ts
 export type AttendanceRow = {
-  id: string
-  childId: string
-  status: "present" | "away"
-  checkIn?: string
-  checkOut?: string
+  id: string;
+  childId: string;
+  date: string; // YYYY-MM-DD
+  status: "present" | "away";
+  checkIn?: string; // "HH:MM"
+  checkOut?: string; // "HH:MM"
 }
 
-const API_URL = "http://localhost:8080/attendance" // Gateway URL
+const API_URL = "http://localhost:8080/attendance";
 
-// Fetch all attendance rows
 export const fetchAttendance = async (): Promise<AttendanceRow[]> => {
-  const res = await fetch(API_URL)
-  if (!res.ok) throw new Error("Failed to fetch attendance")
-  return res.json()
-}
+  const res = await fetch(API_URL);
+  if (!res.ok) throw new Error("Failed to fetch attendance");
+  return res.json();
+};
 
-// Create new attendance record
-export const createAttendance = async (
-  attendance: Partial<AttendanceRow>
-): Promise<AttendanceRow> => {
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(attendance),
-  })
-  if (!res.ok) throw new Error("Failed to create attendance")
-  return res.json()
-}
-
-// Update existing attendance
-export const updateAttendance = async (
-  id: string,
-  attendance: Partial<AttendanceRow>
-): Promise<AttendanceRow> => {
+export const updateAttendance = async (id: string, payload: Partial<AttendanceRow>) => {
   const res = await fetch(`${API_URL}/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(attendance),
-  })
-  if (!res.ok) throw new Error("Failed to update attendance")
-  return res.json()
-}
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Failed to update attendance: ${res.status} ${txt}`);
+  }
+  return res.json();
+};
 
-// Delete attendance record
-export const deleteAttendance = async (id: string) => {
-  const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" })
-  if (!res.ok) throw new Error("Failed to delete attendance")
-  return true
-}
+export const createAttendance = async (payload: Partial<AttendanceRow>) => {
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Failed to create attendance: ${res.status} ${txt}`);
+  }
+  return res.json();
+};

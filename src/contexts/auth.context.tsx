@@ -2,8 +2,9 @@
 
 import type React from "react"
 import { createContext, useContext } from "react"
-import { useAuth } from "../hooks/use-auth"
-import type { AuthUser, LoginCredentials } from "../services/auth.service"
+import { useAuth } from "../hooks/useAuth"
+import type { AuthUser } from "../types/auth.types"
+import { LoginCredentials } from "../services/auth.service"
 
 interface AuthContextType {
   user: AuthUser | null

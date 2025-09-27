@@ -17,7 +17,7 @@ import {
   Bell,
   MapPin,
 } from "lucide-react"
-import type { Role } from "./rbac"
+import { Role } from "../contexts/rbac"
 
 export type NavSection = "Overview" | "Operations" | "Engagement" | "Insights" | "System" | "Parent Portal"
 

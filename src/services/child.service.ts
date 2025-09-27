@@ -1,5 +1,6 @@
 // services/child.service.ts
 export type ChildRow = {
+  child: ReactNode;
   id: string;
   firstName: string;
   lastName: string;
@@ -21,6 +22,7 @@ export const fetchChildren = async (): Promise<ChildRow[]> => {
   if (!res.ok) throw new Error("Failed to fetch children");
   return res.json();
 }
+
 
 export const createChild = async (child: Partial<ChildRow>): Promise<ChildRow> => {
   const res = await fetch(API_URL, {

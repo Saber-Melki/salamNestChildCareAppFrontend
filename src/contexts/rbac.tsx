@@ -42,8 +42,10 @@ const rolePermissions: Record<Role, string[]> = {
     "view:reports",
     "manage:calendar",
     "manage:settings",
+    "manage:staff",
     "manage:users",
-    "view:parent-portal",
+    "manage:bookings",
+   
   ],
   staff: [
     "view:dashboard",
@@ -55,9 +57,9 @@ const rolePermissions: Record<Role, string[]> = {
     "view:media",
     "view:reports",
     "manage:calendar",
-    "view:parent-portal",
+    "manage:bookings",
   ],
-  parent: ["view:dashboard", "view:messages", "view:media", "view:reports", "view:parent-portal"],
+  parent: ["view:messages", "view:media", "view:reports", "view:parent-portal", "manage:calendar", "manage:bookings"],
 }
 
 const RBACContext = React.createContext<RBACContextValue | null>(null)
@@ -153,14 +155,6 @@ export function RBACProvider({ children }: { children: React.ReactNode }) {
     if (authState.user) {
       return authState.user
     }
-
-    // Fallback demo users for development
-    const demoUsers = {
-      admin: { id: "1", name: "Sarah Johnson", email: "sarah.johnson@childcare.com", role: "admin" as Role },
-      staff: { id: "2", name: "Emily Davis", email: "emily.davis@childcare.com", role: "staff" as Role },
-      parent: { id: "3", name: "Michael Brown", email: "michael.brown@parent.com", role: "parent" as Role },
-    }
-    return demoUsers[role]
   }, [authState.user, role])
 
   return (
