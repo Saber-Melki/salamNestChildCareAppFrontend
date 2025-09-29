@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { AppShell, Section } from "../components/app-shell"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table"
@@ -9,6 +8,7 @@ import { Badge } from "../components/ui/badge"
 import { CheckSquare, Users, TrendingUp, Clock, UserCheck, Search } from "lucide-react"
 import { Card, CardContent } from "../components/ui/card"
 import { fetchChildren, type ChildRow } from "../services/child.service"
+import { AppShell, Section } from "../components/app-shell"
 
 // ----------------- API DIRECT -----------------
 export type AttendanceRow = {

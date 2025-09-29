@@ -18,3 +18,20 @@ export const NAV_ITEMS = [
   { label: "Staff", href: "/staff", icon: Users, permission: "manage:settings", section: "System" },
   { label: "Settings", href: "/settings", icon: Settings, permission: "manage:settings", section: "System" },
 ];
+
+
+export const NOTE_TYPES = [
+  { value: "Incident", label: "🚨 Incident Report", color: "from-red-500 to-pink-500", bgColor: "bg-red-50" },
+  { value: "Medication", label: "💊 Medication", color: "from-blue-500 to-indigo-500", bgColor: "bg-blue-50" },
+  { value: "Allergy", label: "⚠️ Allergy Update", color: "from-orange-500 to-amber-500", bgColor: "bg-orange-50" },
+  { value: "Immunization", label: "💉 Immunization", color: "from-green-500 to-emerald-500", bgColor: "bg-green-50" },
+  { value: "Checkup", label: "🩺 Health Checkup", color: "from-purple-500 to-violet-500", bgColor: "bg-purple-50" },
+  { value: "Observation", label: "👁️ Observation", color: "from-teal-500 to-cyan-500", bgColor: "bg-teal-50" },
+  {
+    value: "Temperature",
+    label: "🌡️ Temperature Check",
+    color: "from-yellow-500 to-orange-500",
+    bgColor: "bg-yellow-50",
+  },
+  { value: "Injury", label: "🩹 Injury Report", color: "from-red-600 to-rose-600", bgColor: "bg-red-50" },
+];

@@ -25,6 +25,9 @@ import {
   DoorOpen,
   CalendarCheck2,
   Baby,
+  MessageCircle,
+  Bot,
+  BotIcon,
 } from "lucide-react"
 import { Button } from "./ui/button"
 import { Card } from "./ui/card"
@@ -101,7 +104,9 @@ const NAV_ITEMS = [
   { label: "AI Assistant", href: "/ai-assistant", icon: Sparkles, permission: "view:ai-assistant", section: "Insights" },
   { label: "User Management", href: "/user-management", icon: UserCog, permission: "manage:users", section: "System"},
   { label: "Staff", href: "/staff", icon: Users, permission: "manage:settings", section: "System" },
+  { label: "Chat Assistant", href: "/chat", icon: BotIcon, permission: "manage:settings", section: "System" },
   { label: "Settings", href: "/settings", icon: Settings, permission: "manage:settings", section: "System" },
+
 ]
 
 function BrandHeader({ collapsed }: { collapsed: boolean }) {

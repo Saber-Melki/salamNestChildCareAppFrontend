@@ -109,12 +109,12 @@ async function deleteEvent(id: string) {
 
 // ---------------- Event Type Config
 const eventTypeConfig = {
-  "field-trip": { label: "Field Trip", color: "bg-blue-100 text-blue-800 border-blue-200", icon: MapPin, description: "Educational outings" },
-  closure: { label: "Center Closed", color: "bg-red-100 text-red-800 border-red-200", icon: AlertTriangle, description: "Days when center is closed" },
-  holiday: { label: "Holiday", color: "bg-green-100 text-green-800 border-green-200", icon: Star, description: "Public holidays" },
-  training: { label: "Staff Training", color: "bg-orange-100 text-orange-800 border-orange-200", icon: BookOpen, description: "Professional development" },
-  maintenance: { label: "Maintenance", color: "bg-gray-100 text-gray-800 border-gray-200", icon: Wrench, description: "Facility maintenance" },
-  meeting: { label: "Meeting", color: "bg-purple-100 text-purple-800 border-purple-200", icon: Users, description: "Team meetings" },
+  "field-trip": { label: "Field Trip", color: "bg-blue-100 text-blue-800 border-blue-200 icon-blue-800", icon: MapPin, description: "Educational outings" },
+  closure: { label: "Center Closed", color: "bg-red-100 text-red-800 border-red-200 icon-red-800", icon: AlertTriangle, description: "Days when center is closed" },
+  holiday: { label: "Holiday", color: "bg-green-100 text-green-800 border-green-200 icon-green-800", icon: Star, description: "Public holidays" },
+  training: { label: "Staff Training", color: "bg-orange-100 text-orange-800 border-orange-200 icon-orange-800", icon: BookOpen, description: "Professional development" },
+  maintenance: { label: "Maintenance", color: "bg-gray-100 text-gray-800 border-gray-200 icon-gray-800", icon: Wrench, description: "Facility maintenance" },
+  meeting: { label: "Meeting", color: "bg-purple-100 text-purple-800 border-purple-200 icon-purple-800", icon: Users, description: "Team meetings" },
 };
 
 

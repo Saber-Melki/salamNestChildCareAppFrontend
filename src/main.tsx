@@ -7,7 +7,7 @@ import App from "./routes/app"
 import Dashboard from "./pages/dashboard"
 import Attendance from "./pages/attendance"
 import Children from "./pages/children"
-import Health from "./pages/health"
+// import Health from "./pages/health"
 import Billing from "./pages/billing"
 import Scheduling from "./pages/scheduling"
 import Messages from "./pages/messages"
@@ -21,6 +21,8 @@ import ParentPortal from "./pages/parent-portal"
 import UserManagement from "./pages/user-management"
 import { RBACProvider } from "./contexts/rbac"
 import Booking from "./pages/booking"
+import ChatPage from "./pages/chat"
+import Health from "./pages/health"
 
 const router = createBrowserRouter([
   // Routes publiques
@@ -46,7 +48,8 @@ const router = createBrowserRouter([
       { path: "booking", element: <Booking /> },
       { path: "staff", element: <Staff /> },
       { path: "parent-portal", element: <ParentPortal /> },
-      { path: "user-management", element: <UserManagement /> },
+      // { path: "user-management", element: <UserManagement /> },
+      { path: "chat", element: <ChatPage /> },
       { path: "settings", element: <Settings /> },
       
     ],
