@@ -42,20 +42,15 @@ import {
   Calendar,
   Clock,
   User,
-  Download,
   Search,
   Filter,
   NotepadText,
-  CheckCircle,
   FileDown,
+  CheckCircle,
 } from "lucide-react"
 import { fetchChildren, type ChildRow } from "../services/child.service"
-
-declare global {
-    interface Window {
-        jspdf: any;
-    }
-}
+import { healthPDFService } from "../services/health-pdf-service"
+import { useBranding } from "../contexts/branding"
 
 interface HealthNote {
   id: string
@@ -114,12 +109,14 @@ export default function Health() {
   const [selectedChild, setSelectedChild] = useState<HealthRecord | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState("all")
+  const [exportingPDF, setExportingPDF] = useState(false)
+  const [exportSuccess, setExportSuccess] = useState(false)
 
   const [rows, setRows] = useState<HealthRecord[]>([])
   const [children, setChildren] = useState<ChildRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [exportingPDF, setExportingPDF] = useState(false);
-  const [exportSuccess, setExportSuccess] = useState(false);
+
+  // const { centerName } = useBranding()
 
   const childrenOptions = children.map((child) => ({
     id: child.id,
@@ -175,6 +172,25 @@ export default function Health() {
     const res = await fetch(`http://localhost:8080/health/${id}`, { method: "DELETE" })
     if (!res.ok) throw new Error("Failed to delete health note")
     return res.json()
+  }
+
+  // ----------- PDF Export Function -------------
+  const exportHealthRecordsPDF = async () => {
+    setExportingPDF(true)
+    setExportSuccess(false)
+
+    try {
+      // Generate PDF using the health PDF service with Salam Nest branding
+      healthPDFService.generateHealthRecordsPDF(filteredRows, "Salam Nest")
+
+      setExportSuccess(true)
+      setTimeout(() => setExportSuccess(false), 3000)
+    } catch (error) {
+      console.error("Error exporting PDF:", error)
+      alert("Failed to export PDF. Please try again.")
+    } finally {
+      setExportingPDF(false)
+    }
   }
 
   // ----------- Load Data -------------
@@ -330,85 +346,6 @@ export default function Health() {
     return type?.label.split(" ")[0] || "📝"
   }
 
-  // ----------- PDF Export Function -------------
-  const exportHealthRecordsPDF = async () => {
-    setExportingPDF(true);
-    setExportSuccess(false);
-
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-
-      doc.setFontSize(22);
-      doc.setFont("helvetica", "bold");
-      doc.text("Health Records Summary", 105, 20, { align: "center" });
-
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 27, { align: "center" });
-
-      let yPosition = 40;
-
-      filteredRows.forEach((record, index) => {
-        if (yPosition > 250) {
-            doc.addPage();
-            yPosition = 20;
-        }
-
-        doc.setFontSize(16);
-        doc.setFont("helvetica", "bold");
-        doc.text(record.child, 14, yPosition);
-        yPosition += 8;
-
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "normal");
-        doc.text(`Allergies: ${record.allergies}`, 14, yPosition);
-        yPosition += 6;
-        doc.text(`Immunizations: ${record.immunizations}`, 14, yPosition);
-        yPosition += 6;
-        doc.text(`Emergency Info: ${record.emergency}`, 14, yPosition);
-        yPosition += 10;
-        
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
-        doc.text('Health Notes:', 14, yPosition);
-        yPosition += 2;
-
-
-        (doc as any).autoTable({
-            head: [['Date', 'Type', 'Description', 'Priority', 'Status']],
-            body: record.notes.map(note => [
-                note.date,
-                note.noteType,
-                note.description,
-                note.priority || 'N/A',
-                note.status || 'N/A'
-            ]),
-            startY: yPosition,
-            theme: 'grid',
-            headStyles: { fillColor: [34, 197, 94] }, // Emerald color
-            columnStyles: { 2: { cellWidth: 80 } }
-        });
-
-        yPosition = (doc as any).autoTable.previous.finalY + 15;
-      });
-
-
-      const exportFileDefaultName = `health-records-${new Date().toISOString().split("T")[0]}.pdf`;
-      doc.save(exportFileDefaultName);
-
-      setExportSuccess(true);
-      setTimeout(() => setExportSuccess(false), 3000);
-    } catch (error) {
-      console.error("Error exporting PDF:", error);
-      alert("Failed to export PDF. Please try again.");
-    } finally {
-      setExportingPDF(false);
-    }
-  };
-
-
   return (
     <AppShell title="Health Records">
       {/* Enhanced Hero Header */}
@@ -498,34 +435,31 @@ export default function Health() {
           </div>
 
           {/* Search and Filter */}
-          <div className="flex gap-3 flex-1 max-w-lg ml-auto">
+          <div className="flex gap-3 flex-1 max-w-md ml-auto">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Search children..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-10 border-2 border-emerald-200 focus:border-emerald-400"
+                className="pl-10 border-2 border-emerald-200 focus:border-emerald-400"
               />
             </div>
-            <div className="relative flex-1">
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-40 h-10 border-2 border-emerald-200 focus:border-emerald-400 flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-gray-500" />
-                  {filterType === "all" ? "All Types" : filterType}
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {NOTE_TYPES.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-40 border-2 border-emerald-200 focus:border-emerald-400">
+                <Filter className="h-4 w-4 mr-2" />
+                {filterType === "all" ? "All Types" : filterType}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {NOTE_TYPES.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-
         </div>
 
         {loading ? (
@@ -551,8 +485,8 @@ export default function Health() {
                 {filteredRows.map((record, index) => {
                   const recentNotes = record.notes
                     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                    .slice(0, 3);
-                  const hasHighPriorityNotes = record.notes.some((note) => note.priority === "high");
+                    .slice(0, 3)
+                  const hasHighPriorityNotes = record.notes.some((note) => note.priority === "high")
 
                   return (
                     <TableRow
@@ -653,7 +587,7 @@ export default function Health() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  );
+                  )
                 })}
               </TableBody>
             </Table>
@@ -878,8 +812,9 @@ export default function Health() {
                             <div className="flex items-center gap-3 mb-3 flex-wrap">
                               <Badge
                                 variant="outline"
-                                className={`border-emerald-300 text-emerald-700 bg-emerald-100 font-semibold px-3 py-1 ${noteType?.bgColor
-                                  }`}
+                                className={`border-emerald-300 text-emerald-700 bg-emerald-100 font-semibold px-3 py-1 ${
+                                  noteType?.bgColor
+                                }`}
                               >
                                 {getNoteTypeIcon(note.noteType)} {note.noteType}
                               </Badge>

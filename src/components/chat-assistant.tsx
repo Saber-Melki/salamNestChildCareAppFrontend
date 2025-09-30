@@ -105,13 +105,23 @@ What would you like to know about your childcare center today?`,
   }, [user?.name])
 
   const speakText = (text: string) => {
-    if (autoSpeak && "speechSynthesis" in window) {
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.rate = 0.9
-      utterance.pitch = 1
-      speechSynthesis.speak(utterance)
+  if (autoSpeak && "speechSynthesis" in window) {
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = "en-US" // force English (US), you can change to "en-GB", etc.
+    utterance.rate = 0.9
+    utterance.pitch = 1
+
+    // Optional: pick a specific English voice if available
+    const voices = speechSynthesis.getVoices()
+    const englishVoice = voices.find(v => v.lang.startsWith("en"))
+    if (englishVoice) {
+      utterance.voice = englishVoice
     }
+
+    speechSynthesis.speak(utterance)
   }
+}
+
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return

@@ -40,6 +40,8 @@ import {
   Filter,
   Download,
   Upload,
+  Sparkles,
+  TrendingUp,
 } from "lucide-react"
 
 interface StaffMember {
@@ -165,14 +167,6 @@ const STATUS_COLORS = {
   "on-leave": "bg-orange-100 text-orange-800",
 }
 
-const ROLE_POSITIONS = {
-  director: "Center Director",
-  teacher: "Lead Teacher",
-  assistant: "Assistant Teacher",
-  substitute: "Substitute Teacher",
-  admin: "Administrative Staff",
-}
-
 function AddStaffDialog() {
   const [open, setOpen] = React.useState(false)
   const [formData, setFormData] = React.useState({
@@ -285,12 +279,7 @@ function AddStaffDialog() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="role">Role *</Label>
-                  <Select
-                    value={formData.role}
-                    onValueChange={(value: "director" | "teacher" | "assistant" | "substitute" | "admin") =>
-                      setFormData({ ...formData, role: value })
-                    }
-                  >
+                  <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
@@ -479,12 +468,7 @@ function EditStaffDialog({ staff }: { staff: StaffMember }) {
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-role">Role *</Label>
-                  <Select
-                    value={formData.role}
-                    onValueChange={(value: "director" | "teacher" | "assistant" | "substitute" | "admin") =>
-                      setFormData({ ...formData, role: value })
-                    }
-                  >
+                  <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -501,7 +485,7 @@ function EditStaffDialog({ staff }: { staff: StaffMember }) {
                   <Label htmlFor="edit-status">Status *</Label>
                   <Select
                     value={formData.status}
-                    onValueChange={(value: "active" | "inactive" | "on-leave") => setFormData({ ...formData, status: value })}
+                    onValueChange={(value) => setFormData({ ...formData, status: value })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -652,12 +636,10 @@ function StaffDetailsDialog({ staff }: { staff: StaffMember }) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <img
-                  src="/miss.jpeg"
-                  alt="Teacher avatar"
-                  width={40}
-                  height={40}
-                  className="rounded-full"
-                />
+              src={staff.avatar || "/placeholder.svg?height=40&width=40&text=" + staff.firstName[0] + staff.lastName[0]}
+              alt={`${staff.firstName} ${staff.lastName}`}
+              className="h-10 w-10 rounded-full"
+            />
             {staff.firstName} {staff.lastName}
           </DialogTitle>
           <DialogDescription>Complete staff member information and employment details.</DialogDescription>
@@ -701,10 +683,6 @@ function StaffDetailsDialog({ staff }: { staff: StaffMember }) {
                 <Award className="h-4 w-4 text-gray-400" />
                 <span className="text-sm">${staff.hourlyRate}/hour</span>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-gray-400" />
-              <span className="text-sm">Position: {ROLE_POSITIONS[staff.role]}</span>
             </div>
           </div>
 
@@ -785,50 +763,83 @@ export default function Staff() {
   return (
     <AppShell title="Staff Management">
       <div className="space-y-6">
-        {/* Stats Cards */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 p-8 text-white shadow-2xl">
+          <div className="absolute inset-0 bg-[url('/abstract-geometric-flow.png')] opacity-10"></div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                <Users className="h-8 w-8" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold">Staff Management</h1>
+                <p className="text-blue-100 text-sm">Manage your amazing team at Salam Nest</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mt-4">
+              <Sparkles className="h-5 w-5 text-yellow-300" />
+              <p className="text-sm text-blue-50">
+                {activeStaff} active team members working together to create a nurturing environment
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users className="h-5 w-5 text-blue-600" />
+          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600 opacity-90"></div>
+            <div className="relative p-6 text-white">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                  <Users className="h-6 w-6" />
+                </div>
+                <TrendingUp className="h-5 w-5 text-blue-100" />
               </div>
-              <div>
-                <div className="text-2xl font-bold">{staff.length}</div>
-                <div className="text-sm text-gray-500">Total Staff</div>
-              </div>
+              <div className="text-3xl font-bold mb-1">{staff.length}</div>
+              <div className="text-sm text-blue-100 font-medium">Total Staff</div>
             </div>
           </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <UserCheck className="h-5 w-5 text-green-600" />
+
+          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-600 opacity-90"></div>
+            <div className="relative p-6 text-white">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                  <UserCheck className="h-6 w-6" />
+                </div>
+                <div className="px-2 py-1 bg-white/20 rounded-full text-xs font-semibold">
+                  {staff.length > 0 ? Math.round((activeStaff / staff.length) * 100) : 0}%
+                </div>
               </div>
-              <div>
-                <div className="text-2xl font-bold">{activeStaff}</div>
-                <div className="text-sm text-gray-500">Active Staff</div>
-              </div>
+              <div className="text-3xl font-bold mb-1">{activeStaff}</div>
+              <div className="text-sm text-green-100 font-medium">Active Staff</div>
             </div>
           </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <UserX className="h-5 w-5 text-orange-600" />
+
+          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-amber-600 opacity-90"></div>
+            <div className="relative p-6 text-white">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                  <UserX className="h-6 w-6" />
+                </div>
+                <Clock className="h-5 w-5 text-orange-100" />
               </div>
-              <div>
-                <div className="text-2xl font-bold">{staff.filter((s) => s.status === "on-leave").length}</div>
-                <div className="text-sm text-gray-500">On Leave</div>
-              </div>
+              <div className="text-3xl font-bold mb-1">{staff.filter((s) => s.status === "on-leave").length}</div>
+              <div className="text-sm text-orange-100 font-medium">On Leave</div>
             </div>
           </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Award className="h-5 w-5 text-purple-600" />
+
+          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-600 opacity-90"></div>
+            <div className="relative p-6 text-white">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                  <Award className="h-6 w-6" />
+                </div>
+                <Sparkles className="h-5 w-5 text-purple-100" />
               </div>
-              <div>
-                <div className="text-2xl font-bold">${totalPayroll.toFixed(0)}</div>
-                <div className="text-sm text-gray-500">Weekly Payroll</div>
-              </div>
+              <div className="text-3xl font-bold mb-1">${totalPayroll.toFixed(0)}</div>
+              <div className="text-sm text-purple-100 font-medium">Weekly Payroll</div>
             </div>
           </Card>
         </div>
@@ -836,7 +847,6 @@ export default function Staff() {
         {/* Staff Management */}
         <Section title="Staff Directory" description="Manage your childcare center staff members.">
           <div className="space-y-4">
-            {/* Search and Filters */}
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -844,12 +854,12 @@ export default function Staff() {
                   placeholder="Search staff by name or email..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
                 />
               </div>
               <div className="flex gap-2">
                 <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-40 border-gray-300">
                     <Filter className="h-4 w-4 mr-2" />
                     <SelectValue />
                   </SelectTrigger>
@@ -863,7 +873,7 @@ export default function Staff() {
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-40 border-gray-300">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -876,50 +886,55 @@ export default function Staff() {
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="flex justify-between items-center">
               <div className="flex gap-2">
                 <AddStaffDialog />
-                <Button variant="outline" className="gap-2 bg-transparent">
+                <Button variant="outline" className="gap-2 border-gray-300 hover:bg-gray-50 bg-transparent">
                   <Upload className="h-4 w-4" />
                   Import CSV
                 </Button>
               </div>
-              <Button variant="outline" className="gap-2 bg-transparent">
+              <Button variant="outline" className="gap-2 border-gray-300 hover:bg-gray-50 bg-transparent">
                 <Download className="h-4 w-4" />
                 Export Staff List
               </Button>
             </div>
 
-            {/* Staff Table */}
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Staff Member</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Employment</TableHead>
-                    <TableHead>Actions</TableHead>
+                  <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
+                    <TableHead className="font-semibold text-gray-700">Staff Member</TableHead>
+                    <TableHead className="font-semibold text-gray-700">Role</TableHead>
+                    <TableHead className="font-semibold text-gray-700">Status</TableHead>
+                    <TableHead className="font-semibold text-gray-700">Contact</TableHead>
+                    <TableHead className="font-semibold text-gray-700">Employment</TableHead>
+                    <TableHead className="font-semibold text-gray-700">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredStaff.map((member) => (
-                    <TableRow key={member.id}>
+                    <TableRow key={member.id} className="hover:bg-blue-50/50 transition-colors duration-150">
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <img
-                            src={
-                              // member.avatar ||
-                              "/miss.jpeg?height=32&width=32&text=" + member.firstName[0] + member.lastName[0] ||
-                              "/placeholder.svg"
-                            }
-                            alt={`${member.firstName} ${member.lastName}`}
-                            className="h-8 w-8 rounded-full"
-                          />
+                          <div className="relative">
+                            <img
+                              src={
+                                member.avatar ||
+                                "/placeholder.svg?height=40&width=40&text=" +
+                                  member.firstName[0] +
+                                  member.lastName[0] ||
+                                "/placeholder.svg"
+                              }
+                              alt={`${member.firstName} ${member.lastName}`}
+                              className="h-10 w-10 rounded-full ring-2 ring-gray-200"
+                            />
+                            {member.status === "active" && (
+                              <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></div>
+                            )}
+                          </div>
                           <div>
-                            <div className="font-medium">
+                            <div className="font-semibold text-gray-900">
                               {member.firstName} {member.lastName}
                             </div>
                             <div className="text-sm text-gray-500">{member.email}</div>
@@ -927,26 +942,26 @@ export default function Staff() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={ROLE_COLORS[member.role]}>{member.role}</Badge>
+                        <Badge className={ROLE_COLORS[member.role] + " font-medium"}>{member.role}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge className={STATUS_COLORS[member.status]}>{member.status}</Badge>
+                        <Badge className={STATUS_COLORS[member.status] + " font-medium"}>{member.status}</Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm">
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3 text-gray-400" />
+                        <div className="text-sm space-y-1">
+                          <div className="flex items-center gap-1.5 text-gray-700">
+                            <Phone className="h-3.5 w-3.5 text-gray-400" />
                             {member.phone}
                           </div>
-                          <div className="flex items-center gap-1 text-gray-500">
-                            <Mail className="h-3 w-3 text-gray-400" />
+                          <div className="flex items-center gap-1.5 text-gray-500">
+                            <Mail className="h-3.5 w-3.5 text-gray-400" />
                             {member.email}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          <div>${member.hourlyRate}/hr</div>
+                          <div className="font-semibold text-gray-900">${member.hourlyRate}/hr</div>
                           <div className="text-gray-500">{member.weeklyHours}h/week</div>
                         </div>
                       </TableCell>
@@ -964,13 +979,15 @@ export default function Staff() {
             </div>
 
             {filteredStaff.length === 0 && (
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No staff members found</h3>
-                <p className="text-gray-500 mb-4">
+              <div className="text-center py-12 bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl border-2 border-dashed border-gray-300">
+                <div className="inline-flex p-4 bg-white rounded-full shadow-sm mb-4">
+                  <Users className="h-12 w-12 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No staff members found</h3>
+                <p className="text-gray-500 mb-6 max-w-md mx-auto">
                   {searchQuery || roleFilter !== "all" || statusFilter !== "all"
-                    ? "Try adjusting your search or filters."
-                    : "Get started by adding your first staff member."}
+                    ? "Try adjusting your search or filters to find what you're looking for."
+                    : "Get started by adding your first staff member to build your amazing team."}
                 </p>
                 {!searchQuery && roleFilter === "all" && statusFilter === "all" && <AddStaffDialog />}
               </div>

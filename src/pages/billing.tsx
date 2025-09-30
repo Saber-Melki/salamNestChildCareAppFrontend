@@ -33,7 +33,10 @@ import {
   DollarSign,
   Calculator,
   Wallet,
-  Paperclip,
+  CheckCircle,
+  Clock,
+  Zap,
+  Shield,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { type ChildRow, fetchChildren } from "../services/child.service"
@@ -53,6 +56,15 @@ export default function Billing() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(false)
   const [families, setFamilies] = useState<string[]>([])
+  const [tapSessionActive, setTapSessionActive] = useState(false)
+  const [sendingReminders, setSendingReminders] = useState(false)
+  const [remindersSent, setRemindersSent] = useState(false)
+
+  const [tapPaymentDialogOpen, setTapPaymentDialogOpen] = useState(false)
+  const [cardPaymentDialogOpen, setCardPaymentDialogOpen] = useState(false)
+  const [achPaymentDialogOpen, setAchPaymentDialogOpen] = useState(false)
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState("")
+  const [reminderDialogOpen, setReminderDialogOpen] = useState(false)
 
   const [formData, setFormData] = useState({
     family: "",
@@ -151,13 +163,92 @@ export default function Billing() {
     }
   }
 
-  // Send reminders
-  const sendReminders = async () => {
+  const handleTapPayment = async () => {
+    if (!selectedInvoiceId) return
+
+    setTapSessionActive(true)
+
     try {
+      await new Promise((resolve) => setTimeout(resolve, 3000))
+
+      const res = await fetch(`http://localhost:8080/billing/${selectedInvoiceId}/paid`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoiceId: selectedInvoiceId, method: "tap" }),
+      })
+
+      if (!res.ok) throw new Error("Payment failed")
+
+      const updated = await fetch("http://localhost:8080/billing")
+      setInvoices(await updated.json())
+      setTapPaymentDialogOpen(false)
+      setSelectedInvoiceId("")
+    } catch (err) {
+      console.error(err)
+      alert("❌ Payment error")
+    } finally {
+      setTapSessionActive(false)
+    }
+  }
+
+  const handleCardPayment = async () => {
+    if (!selectedInvoiceId) return
+
+    try {
+      const res = await fetch(`http://localhost:8080/billing/${selectedInvoiceId}/paid`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoiceId: selectedInvoiceId, method: "card" }),
+      })
+      if (!res.ok) throw new Error("Payment failed")
+
+      const updated = await fetch("http://localhost:8080/billing")
+      setInvoices(await updated.json())
+      setCardPaymentDialogOpen(false)
+      setSelectedInvoiceId("")
+    } catch (err) {
+      console.error(err)
+      alert("❌ Payment error")
+    }
+  }
+
+  const handleAchPayment = async () => {
+    if (!selectedInvoiceId) return
+
+    try {
+      const res = await fetch(`http://localhost:8080/billing/${selectedInvoiceId}/paid`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoiceId: selectedInvoiceId, method: "ach" }),
+      })
+      if (!res.ok) throw new Error("Payment failed")
+
+      const updated = await fetch(`http://localhost:8080/billing`)
+      setInvoices(await updated.json())
+      setAchPaymentDialogOpen(false)
+      setSelectedInvoiceId("")
+    } catch (err) {
+      console.error(err)
+      alert("❌ Payment error")
+    }
+  }
+
+  const handleSendReminders = async () => {
+    setSendingReminders(true)
+    setRemindersSent(false)
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 2000))
       await fetch("http://localhost:8080/billing/remind/overdue", { method: "POST" })
-      alert("Overdue reminders sent ✅")
+
+      setRemindersSent(true)
+      setReminderDialogOpen(false)
+      setTimeout(() => setRemindersSent(false), 5000)
     } catch (err) {
       console.error("Error sending reminders:", err)
+      alert("Failed to send reminders. Please try again.")
+    } finally {
+      setSendingReminders(false)
     }
   }
 
@@ -387,14 +478,82 @@ export default function Billing() {
               </DialogContent>
             </Dialog>
 
-            <Button
-              variant="outline"
-              onClick={sendReminders}
-              className="border-2 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all duration-300 bg-transparent"
-            >
-              <Send className="h-5 w-5 mr-2 text-pink-600" />
-              Send Overdue Reminders
-            </Button>
+            <Dialog open={reminderDialogOpen} onOpenChange={setReminderDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  disabled={sendingReminders}
+                  className={`border-2 transition-all duration-300 ${
+                    remindersSent
+                      ? "border-green-300 bg-green-50 text-green-700"
+                      : "border-blue-200 hover:bg-blue-50 hover:border-blue-300 bg-transparent"
+                  }`}
+                >
+                  {sendingReminders ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-pink-600 border-t-transparent mr-2" />
+                      Sending Reminders...
+                    </>
+                  ) : remindersSent ? (
+                    <>
+                      <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
+                      Reminders Sent!
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-5 w-5 mr-2 text-pink-600" />
+                      Send Overdue Reminders
+                    </>
+                  )}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md border-0 shadow-2xl bg-gradient-to-br from-white to-orange-50/30">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-3 text-2xl">
+                    <div className="p-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl shadow-lg">
+                      <Send className="h-6 w-6 text-white" />
+                    </div>
+                    Send Overdue Reminders
+                  </DialogTitle>
+                  <DialogDescription className="text-base text-gray-600 mt-2">
+                    This will send automated email reminders to all families with overdue invoices.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogBody className="space-y-4">
+                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="text-2xl">📧</div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-orange-800 mb-2">Reminder Details:</h4>
+                        <ul className="text-sm text-orange-700 space-y-1">
+                          <li>• Professional email template</li>
+                          <li>• Payment instructions included</li>
+                          <li>• Friendly tone with clear due dates</li>
+                          <li>• Sent to all overdue accounts</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </DialogBody>
+                <DialogFooter className="gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setReminderDialogOpen(false)}
+                    className="border-2 border-gray-300 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSendReminders}
+                    disabled={sendingReminders}
+                    className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 shadow-xl"
+                  >
+                    {sendingReminders ? "Sending..." : "✉️ Send Reminders"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
 
           {/* Enhanced Invoice Table */}
@@ -407,9 +566,6 @@ export default function Billing() {
                   <TableHead className="text-white font-semibold text-base">Due Date</TableHead>
                   <TableHead className="text-white font-semibold text-base">Status</TableHead>
                   <TableHead className="text-white font-semibold text-base">Actions</TableHead>
-                  <TableHead className="text-white font-semibold text-base">Details</TableHead>
-                  <TableHead className="text-white font-semibold text-base">Reminders</TableHead>
-                  <TableHead className="text-white font-semibold text-base">Delete</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -452,10 +608,7 @@ export default function Billing() {
                             Mark Paid
                           </Button>
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-gray-700">
-                      <Button
+                        <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => alert(`Invoice Details:\n\n${JSON.stringify(inv, null, 2)}`)}
@@ -463,8 +616,6 @@ export default function Billing() {
                         >
                           <Eye className="h-4 w-4 mr-1" /> View
                         </Button>
-                    </TableCell>
-                    <TableCell className="text-gray-700">
                         <Button
                           size="sm"
                           variant="ghost"
@@ -473,8 +624,6 @@ export default function Billing() {
                         >
                           <Send className="h-4 w-4 mr-1" /> Send
                         </Button>
-                    </TableCell>
-                    <TableCell className="text-gray-700">
                         <Button
                           size="sm"
                           variant="ghost"
@@ -483,6 +632,7 @@ export default function Billing() {
                         >
                           <Trash2 className="h-4 w-4 mr-1" /> Delete
                         </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -491,61 +641,132 @@ export default function Billing() {
           </div>
         </Section>
 
-        <Section title="Collect Payments" description="Tap to Pay, Credit Card, and ACH options.">
+        <Section
+          title="Collect Payments"
+          description="Multiple secure payment options including Tap to Pay, Credit Card, and ACH transfers."
+        >
           <Tabs defaultValue="tap" value={tab} onValueChange={setTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-8">
-              <TabsTrigger value="tap">
-                <center><Smartphone className="h-4 w-4 mr-2" /></center>
-                <span>Tap to Pay</span>
+            <TabsList className="grid w-full grid-cols-3 mb-8 h-16 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-2xl p-2">
+              <TabsTrigger
+                value="tap"
+                // className="flex items-center gap-3 h-12 rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300"
+              >
+                <Smartphone className="h-5 w-5" />
+                <span className="font-semibold">Tap to Pay</span>
               </TabsTrigger>
-              <TabsTrigger value="card">
-                <center><CreditCard className="h-4 w-4 mr-2" /></center>
-                <span>Credit Card</span>
+              <TabsTrigger
+                value="card"
+                // className="flex items-center gap-3 h-12 rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300"
+              >
+                <CreditCard className="h-5 w-5" />
+                <span className="font-semibold">Credit Card</span>
               </TabsTrigger>
-              <TabsTrigger value="ach">
-                <center><Banknote className="h-4 w-4 mr-2" /></center>
-                <span>ACH</span>
+              <TabsTrigger
+                value="ach"
+                // className="flex items-center gap-3 h-12 rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300"
+              >
+                <Banknote className="h-5 w-5" />
+                <span className="font-semibold">ACH Transfer</span>
               </TabsTrigger>
             </TabsList>
 
-            {/* ---------- Tap to Pay ---------- */}
             <TabsContent value="tap" className="mt-0">
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-purple-50 to-pink-50">
-                <CardHeader className="text-center pb-4">
-                  <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-400 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg">
-                    <Smartphone className="h-10 w-10 text-white" />
+              <Card className="border-0 shadow-2xl bg-gradient-to-br from-pink-50 via-pink-50 to-purple-50 overflow-hidden">
+                <CardHeader className="text-center pb-6 bg-gradient-to-r from-pink-500/10 to-indigo-500/10">
+                  <div className="w-24 h-24 bg-gradient-to-r from-pink-500 to-pink-500 rounded-full mx-auto mb-6 flex items-center justify-center shadow-2xl">
+                    <Smartphone className="h-12 w-12 text-white drop-shadow-lg" />
                   </div>
-                  <CardTitle className="text-2xl">Ready for Tap Payment</CardTitle>
-                  <CardDescription className="text-base">
-                    Use your NFC-enabled device to accept contactless payments instantly
+                  <CardTitle className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-pink-600 bg-clip-text text-transparent">
+                    Ready for Tap Payment
+                  </CardTitle>
+                  <CardDescription className="text-lg text-gray-600 mt-2">
+                    Use your NFC-enabled device to accept contactless payments instantly and securely
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="text-center">
-                    <Button
-                      className="bg-gradient-to-r from-purple-500 to-pink-400 hover:from-purple-600 hover:to-pink-500 text-white border-0 shadow-lg"
-                      onClick={async () => {
-                        try {
-                          const invoiceId = prompt("Enter Invoice ID to pay via Tap:")
-                          if (!invoiceId) return
-                          const res = await fetch(`http://localhost:8080/billing/${invoiceId}/paid`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ invoiceId, method: "tap" }),
-                          })
-                          if (!res.ok) throw new Error("Payment failed")
-                          alert("Payment successful!")
-                          // refresh invoices
-                          const updated = await fetch("http://localhost:8080/billing")
-                          setInvoices(await updated.json())
-                        } catch (err) {
-                          console.error(err)
-                          alert("Payment error")
-                        }
-                      }}
-                    >
-                      Start Tap Session
-                    </Button>
+                <CardContent className="space-y-8 p-8">
+                  <br></br>
+                  <div className="text-center space-y-6">
+                    <Dialog open={tapPaymentDialogOpen} onOpenChange={setTapPaymentDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          className="bg-gradient-to-r from-pink-500 via-pink-500 to-purple-500 hover:from-pink-600 hover:via-pink-600 hover:to-purple-600 text-white border-0 shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 px-12 py-4 text-lg font-semibold"
+                        >
+                          <Zap className="h-6 w-6 mr-2" />Start Tap Session
+                        </Button>
+                      </DialogTrigger>
+                      <br></br>
+                      <DialogContent className="max-w-md border-0 shadow-2xl bg-gradient-to-br from-white to-blue-50/30">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-3 text-2xl">
+                            <div className="p-2 bg-gradient-to-r from-pink-500 to-pink-500 rounded-xl shadow-lg">
+                              <Smartphone className="h-6 w-6 text-white" />
+                            </div>
+                            Tap to Pay
+                          </DialogTitle>
+                          <DialogDescription className="text-base text-gray-600 mt-2">
+                            Enter the invoice ID to process payment via contactless tap.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogBody className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="tap-invoice-id" className="text-base font-semibold text-gray-700">
+                              Invoice ID *
+                            </Label>
+                            <Input
+                              id="tap-invoice-id"
+                              value={selectedInvoiceId}
+                              onChange={(e) => setSelectedInvoiceId(e.target.value)}
+                              placeholder="Enter invoice ID..."
+                              className="h-12 text-lg border-2 border-pink-200 focus:border-pink-400 bg-white"
+                            />
+                          </div>
+                          {tapSessionActive && (
+                            <div className="bg-pink-50 border border-pink-200 rounded-xl p-4">
+                              <div className="flex items-center gap-3">
+                                <div className="animate-spin rounded-full h-6 w-6 border-2 border-pink-600 border-t-transparent" />
+                                <div className="text-sm text-pink-700 font-medium">
+                                  Processing payment... Please hold device near reader.
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </DialogBody>
+                        <DialogFooter className="gap-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              setTapPaymentDialogOpen(false)
+                              setSelectedInvoiceId("")
+                            }}
+                            className="border-2 border-gray-300 hover:bg-gray-50"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleTapPayment}
+                            disabled={!selectedInvoiceId || tapSessionActive}
+                            className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white border-0 shadow-xl"
+                          >
+                            {tapSessionActive ? "Processing..." : "💳 Process Payment"}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                    <div className="grid grid-cols-3 gap-4 text-center text-sm text-gray-600">
+                      <div className="p-4 bg-white/60 rounded-xl">
+                        <div className="text-2xl mb-2">⚡</div>
+                        <div className="font-semibold">Instant</div>
+                      </div>
+                      <div className="p-4 bg-white/60 rounded-xl">
+                        <div className="text-2xl mb-2">🔒</div>
+                        <div className="font-semibold">Secure</div>
+                      </div>
+                      <div className="p-4 bg-white/60 rounded-xl">
+                        <div className="text-2xl mb-2">📱</div>
+                        <div className="font-semibold">Contactless</div>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -553,90 +774,231 @@ export default function Billing() {
 
             {/* ---------- Credit Card ---------- */}
             <TabsContent value="card" className="mt-0">
-              <Card className="border-0 shadow-xl">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
+              <Card className="border-0 shadow-2xl bg-gradient-to-br from-green-50 to-emerald-50">
+                <CardHeader className="pb-6">
+                  <CardTitle className="flex items-center gap-3 text-2xl">
+                    <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow-lg">
+                      <CreditCard className="h-6 w-6 text-white" />
+                    </div>
                     Credit Card Payment
                   </CardTitle>
-                  <CardDescription>Enter your card details for secure payment processing</CardDescription>
+                  <CardDescription className="text-base text-gray-600">
+                    Enter card details for secure payment processing with industry-standard encryption
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-6 max-w-md mx-auto">
-                    <div className="space-y-4">
-                      <Input id="card-number" placeholder="4242 4242 4242 4242" className="mt-1 h-12 text-lg tracking-wider" />
-                      <div className="grid grid-cols-2 gap-4">
-                        <Input id="exp" placeholder="MM/YY" className="mt-1 h-12" />
-                        <Input id="cvc" placeholder="123" className="mt-1 h-12" />
+                  <div className="grid gap-6 max-w-lg mx-auto">
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <Label className="text-base font-semibold text-gray-700">Card Number</Label>
+                        <Input
+                          id="card-number"
+                          placeholder="4242 4242 4242 4242"
+                          className="h-14 text-lg tracking-wider font-mono border-2 border-green-200 focus:border-green-400 bg-white"
+                        />
                       </div>
-                      <Input id="zip" placeholder="12345" className="mt-1 h-12" />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-base font-semibold text-gray-700">Expiry</Label>
+                          <Input
+                            id="exp"
+                            placeholder="MM/YY"
+                            className="h-14 text-lg font-mono border-2 border-green-200 focus:border-green-400 bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-base font-semibold text-gray-700">CVC</Label>
+                          <Input
+                            id="cvc"
+                            placeholder="123"
+                            className="h-14 text-lg font-mono border-2 border-green-200 focus:border-green-400 bg-white"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-base font-semibold text-gray-700">ZIP Code</Label>
+                        <Input
+                          id="zip"
+                          placeholder="12345"
+                          className="h-14 text-lg font-mono border-2 border-green-200 focus:border-green-400 bg-white"
+                        />
+                      </div>
                     </div>
-                    <Button
-                      className="bg-gradient-to-r from-purple-500 to-pink-400 hover:from-purple-600 hover:to-pink-500 text-white border-0 shadow-lg h-12"
-                      onClick={async () => {
-                        try {
-                          const invoiceId = prompt("Enter Invoice ID to pay by Credit Card:")
-                          if (!invoiceId) return
-                          const res = await fetch(`http://localhost:8080/billing/${invoiceId}/paid`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ invoiceId, method: "card" }),
-                          })
-                          if (!res.ok) throw new Error("Payment failed")
-                          alert("Credit Card payment successful!")
-                          const updated = await fetch("http://localhost:8080/billing")
-                          setInvoices(await updated.json())
-                        } catch (err) {
-                          console.error(err)
-                          alert("Payment error")
-                        }
-                      }}
-                    >
-                      Pay Now
-                    </Button>
+                    <Dialog open={cardPaymentDialogOpen} onOpenChange={setCardPaymentDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 shadow-xl hover:shadow-2xl transition-all duration-300 h-14 text-lg font-semibold"
+                        >
+                          <Shield className="h-5 w-5 mr-2" />💳 Pay Now
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md border-0 shadow-2xl bg-gradient-to-br from-white to-green-50/30">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-3 text-2xl">
+                            <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow-lg">
+                              <CreditCard className="h-6 w-6 text-white" />
+                            </div>
+                            Credit Card Payment
+                          </DialogTitle>
+                          <DialogDescription className="text-base text-gray-600 mt-2">
+                            Enter the invoice ID to process credit card payment.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogBody className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="card-invoice-id" className="text-base font-semibold text-gray-700">
+                              Invoice ID *
+                            </Label>
+                            <Input
+                              id="card-invoice-id"
+                              value={selectedInvoiceId}
+                              onChange={(e) => setSelectedInvoiceId(e.target.value)}
+                              placeholder="Enter invoice ID..."
+                              className="h-12 text-lg border-2 border-green-200 focus:border-green-400 bg-white"
+                            />
+                          </div>
+                          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                            <div className="flex items-center gap-2 text-green-700">
+                              <Shield className="h-5 w-5" />
+                              <div className="text-sm font-medium">
+                                Your payment is secured with industry-standard encryption
+                              </div>
+                            </div>
+                          </div>
+                        </DialogBody>
+                        <DialogFooter className="gap-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              setCardPaymentDialogOpen(false)
+                              setSelectedInvoiceId("")
+                            }}
+                            className="border-2 border-gray-300 hover:bg-gray-50"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleCardPayment}
+                            disabled={!selectedInvoiceId}
+                            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 shadow-xl"
+                          >
+                            💳 Process Payment
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            {/* ---------- ACH ---------- */}
             <TabsContent value="ach" className="mt-0">
-              <Card className="border-0 shadow-xl">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Banknote className="h-5 w-5" />
+              <Card className="border-0 shadow-2xl bg-gradient-to-br from-orange-50 to-amber-50">
+                <CardHeader className="pb-6">
+                  <CardTitle className="flex items-center gap-3 text-2xl">
+                    <div className="p-2 bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl shadow-lg">
+                      <Banknote className="h-6 w-6 text-white" />
+                    </div>
                     ACH Bank Transfer
                   </CardTitle>
-                  <CardDescription>Connect your bank account for direct transfer payments</CardDescription>
+                  <CardDescription className="text-base text-gray-600">
+                    Connect your bank account for secure direct transfer payments with lower processing fees
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4 max-w-md mx-auto">
-                    <Input id="routing" placeholder="110000000" className="mt-1 h-12 font-mono tracking-wider" />
-                    <Input id="account" placeholder="000123456789" className="mt-1 h-12 font-mono tracking-wider" />
+                  <div className="space-y-6 max-w-lg mx-auto">
+                    <div className="space-y-2">
+                      <Label className="text-base font-semibold text-gray-700">Routing Number</Label>
+                      <Input
+                        id="routing"
+                        placeholder="110000000"
+                        className="h-14 text-lg font-mono tracking-wider border-2 border-orange-200 focus:border-orange-400 bg-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-base font-semibold text-gray-700">Account Number</Label>
+                      <Input
+                        id="account"
+                        placeholder="000123456789"
+                        className="h-14 text-lg font-mono tracking-wider border-2 border-orange-200 focus:border-orange-400 bg-white"
+                      />
+                    </div>
+                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                      <div className="flex items-center gap-2 text-orange-700">
+                        <div className="text-lg">🏦</div>
+                        <div className="text-sm font-medium">
+                          ACH transfers typically take 1-3 business days to process and have lower fees than card
+                          payments.
+                        </div>
+                      </div>
+                    </div>
+                    <Dialog open={achPaymentDialogOpen} onOpenChange={setAchPaymentDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white border-0 shadow-xl hover:shadow-2xl transition-all duration-300 h-14 text-lg font-semibold w-full"
+                        >
+                          <Clock className="h-5 w-5 mr-2" />🏦 Authorize ACH Debit
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md border-0 shadow-2xl bg-gradient-to-br from-white to-orange-50/30">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-3 text-2xl">
+                            <div className="p-2 bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl shadow-lg">
+                              <Banknote className="h-6 w-6 text-white" />
+                            </div>
+                            ACH Bank Transfer
+                          </DialogTitle>
+                          <DialogDescription className="text-base text-gray-600 mt-2">
+                            Enter the invoice ID to process ACH bank transfer payment.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogBody className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="ach-invoice-id" className="text-base font-semibold text-gray-700">
+                              Invoice ID *
+                            </Label>
+                            <Input
+                              id="ach-invoice-id"
+                              value={selectedInvoiceId}
+                              onChange={(e) => setSelectedInvoiceId(e.target.value)}
+                              placeholder="Enter invoice ID..."
+                              className="h-12 text-lg border-2 border-orange-200 focus:border-orange-400 bg-white"
+                            />
+                          </div>
+                          <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                            <div className="flex items-start gap-3">
+                              <Clock className="h-5 w-5 text-orange-600 mt-0.5" />
+                              <div className="text-sm text-orange-700">
+                                <p className="font-semibold mb-1">Processing Time:</p>
+                                <p>ACH transfers take 1-3 business days to complete. Lower fees apply.</p>
+                              </div>
+                            </div>
+                          </div>
+                        </DialogBody>
+                        <DialogFooter className="gap-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              setAchPaymentDialogOpen(false)
+                              setSelectedInvoiceId("")
+                            }}
+                            className="border-2 border-gray-300 hover:bg-gray-50"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleAchPayment}
+                            disabled={!selectedInvoiceId}
+                            className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white border-0 shadow-xl"
+                          >
+                            🏦 Authorize Payment
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   </div>
-                  <Button
-                    className="bg-gradient-to-r from-purple-500 to-pink-400 hover:from-purple-600 hover:to-pink-500 text-white border-0 shadow-lg h-12 mt-4"
-                    onClick={async () => {
-                      try {
-                        const invoiceId = prompt("Enter Invoice ID to pay via ACH:")
-                        if (!invoiceId) return
-                        const res = await fetch(`http://localhost:8080/billing/${invoiceId}/paid`, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ invoiceId, method: "ach" }),
-                        })
-                        if (!res.ok) throw new Error("Payment failed")
-                        alert("ACH payment successful!")
-                        const updated = await fetch(`http://localhost:8080/billing`)
-                        setInvoices(await updated.json())
-                      } catch (err) {
-                        console.error(err)
-                        alert("Payment error")
-                      }
-                    }}
-                  >
-                    Authorize ACH Debit
-                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>

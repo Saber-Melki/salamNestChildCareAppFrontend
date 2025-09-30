@@ -102,7 +102,7 @@ const NAV_ITEMS = [
   { label: "Calendar", href: "/calendar", icon: CalendarDays, permission: "manage:calendar", section: "Insights" },
   { label: "Bookings", href: "/booking", icon: Plus, permission: "manage:bookings", section: "Insights" },
   { label: "AI Assistant", href: "/ai-assistant", icon: Sparkles, permission: "view:ai-assistant", section: "Insights" },
-  { label: "User Management", href: "/user-management", icon: UserCog, permission: "manage:users", section: "System"},
+  // { label: "User Management", href: "/user-management", icon: UserCog, permission: "manage:users", section: "System"},
   { label: "Staff", href: "/staff", icon: Users, permission: "manage:settings", section: "System" },
   { label: "Chat Assistant", href: "/chat", icon: BotIcon, permission: "manage:settings", section: "System" },
   { label: "Settings", href: "/settings", icon: Settings, permission: "manage:settings", section: "System" },

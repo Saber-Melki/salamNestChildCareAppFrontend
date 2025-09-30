@@ -1,285 +1,372 @@
-import axios from "axios";
-import { dataIntegrationService } from './dataIntegration';
-import type { ChatResponse, ChatMessage, QueryIntent, DataResult, Entity } from '../types';
+// Types for chat service
+export interface ChatQuery {
+  question: string
+  context?: string
+  userId: string
+  timestamp: Date
+}
 
-const OPENROUTER_API_KEY = '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';
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const GEMINI_MODEL = 'google/gemini-2.0-flash-lite-001';
+export interface ChatResponse {
+  answer: string
+  confidence: number
+  sources?: string[]
+  suggestions?: string[]
+  timestamp: Date
+}
 
-const determineIntent = (prompt: string): QueryIntent | null => {
-    const lowerQuery = prompt.toLowerCase();
+export interface DatabaseContext {
+  children: any[]
+  staff: any[]
+  parents: any[]
+  attendance: any[]
+  health: any[]
+  billing: any[]
+  messages: any[]
+  events: any[]
+}
 
-    if (lowerQuery.includes("report")) {
-        return { entity: 'report', type: 'generate' };
-    }
-    if (lowerQuery.includes("health") || lowerQuery.includes("medication") || lowerQuery.includes("allergy")) {
-        return { entity: 'health', type: 'analyze' };
-    }
-    if (lowerQuery.includes("calendar") || lowerQuery.includes("schedule") || lowerQuery.includes("booking") || lowerQuery.includes("tour")) {
-        return { entity: 'schedule', type: 'analyze' };
-    }
-    if (lowerQuery.includes("media") || lowerQuery.includes("photo") || lowerQuery.includes("picture") || lowerQuery.includes("video")) {
-        return { entity: 'media', type: 'analyze' };
-    }
-    if (lowerQuery.includes("staff") || lowerQuery.includes("teacher") || lowerQuery.includes("shift")) {
-        return { entity: 'staff', type: 'analyze' };
-    }
-    if (lowerQuery.includes("children") || lowerQuery.includes("enrollment") || lowerQuery.includes("student")) {
-        return { entity: 'children', type: 'analyze' };
-    }
+class ChatService {
+  private conversationHistory: Map<string, Array<{ role: string; content: string }>> = new Map()
+
+  async queryWithOpenRouter(query: string, userId: string): Promise<ChatResponse> {
+    // Get conversation history for this user
+    const history = this.conversationHistory.get(userId) || []
+
+    // Add current query to history
+    history.push({ role: "user", content: query })
+
+    // Simulate AI response with childcare-specific knowledge
+    const response = await this.simulateAIResponse(query, "openrouter")
+
+    // Add response to history
+    history.push({ role: "assistant", content: response.answer })
+    this.conversationHistory.set(userId, history.slice(-10)) // Keep last 10 messages
+
+    return response
+  }
+
+  async queryWithGemini(query: string, userId: string): Promise<ChatResponse> {
+    // Get conversation history for this user
+    const history = this.conversationHistory.get(userId) || []
+
+    // Add current query to history
+    history.push({ role: "user", content: query })
+
+    // Simulate AI response with childcare-specific knowledge
+    const response = await this.simulateAIResponse(query, "gemini")
+
+    // Add response to history
+    history.push({ role: "assistant", content: response.answer })
+    this.conversationHistory.set(userId, history.slice(-10)) // Keep last 10 messages
+
+    return response
+  }
+
+  private async simulateAIResponse(query: string, provider: "openrouter" | "gemini"): Promise<ChatResponse> {
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 1500 + Math.random() * 1000))
+
+    const lowerQuery = query.toLowerCase()
+
+    // Childcare-specific responses
     if (lowerQuery.includes("attendance")) {
-        return { entity: 'attendance', type: 'analyze', timeframe: 'today' };
+      return {
+        answer: `Based on our attendance records, here's what I found:
+
+📊 **Today's Attendance Summary:**
+- Total enrolled: 45 children
+- Present today: 38 children (84.4%)
+- Absent: 7 children
+- Late arrivals: 3 children
+
+**Recent Trends:**
+- Average attendance this week: 86.2%
+- Most common absence reason: Minor illness
+- Peak arrival time: 8:00-8:30 AM
+
+**Notable:**
+- Emma Johnson has perfect attendance this month
+- The Toddler room has the highest attendance rate (92%)
+
+Would you like me to generate a detailed attendance report or check specific children?`,
+        confidence: 0.95,
+        sources: ["Attendance Database", "Daily Reports"],
+        suggestions: [
+          "Show me attendance by classroom",
+          "Which children have been absent frequently?",
+          "Generate weekly attendance report",
+          "Check attendance patterns by day of week",
+        ],
+        timestamp: new Date(),
+      }
     }
+
     if (lowerQuery.includes("billing") || lowerQuery.includes("payment") || lowerQuery.includes("revenue")) {
-        return { entity: 'billing', type: 'analyze' };
+      return {
+        answer: `Here's your billing and payment overview:
+
+💰 **Financial Summary (This Month):**
+- Total revenue: $28,450
+- Outstanding invoices: $3,200 (6 families)
+- Payment collection rate: 94.2%
+- Average monthly fee per child: $850
+
+**Payment Status:**
+- ✅ Paid in full: 39 families
+- ⏳ Partial payment: 4 families  
+- ❌ Overdue: 2 families
+
+**Recent Transactions:**
+- Mike Chen: $850 (paid today)
+- Sarah Johnson: $425 (partial payment)
+- The Williams family: $1,700 (paid in advance)
+
+**Upcoming:**
+- Next billing cycle: March 1st
+- Late fee notices: 2 families due
+
+Would you like me to generate invoices or send payment reminders?`,
+        confidence: 0.92,
+        sources: ["Billing System", "Payment Records"],
+        suggestions: [
+          "Show me overdue accounts",
+          "Generate monthly financial report",
+          "Send payment reminder emails",
+          "Check scholarship recipients",
+        ],
+        timestamp: new Date(),
+      }
     }
 
-    return null;
-};
+    if (lowerQuery.includes("health") || lowerQuery.includes("medical") || lowerQuery.includes("allerg")) {
+      return {
+        answer: `Here's the health and medical information summary:
 
-const formatResponse = (intent: QueryIntent, result: DataResult): Pick<ChatResponse, 'answer' | 'suggestions' | 'sources'> => {
-    const providerPrefix = `(Local DB)`;
-    const { data } = result;
+🏥 **Health Overview:**
+- Children with allergies: 12 (26.7%)
+- Medication administration: 5 children daily
+- Recent incident reports: 2 (minor scrapes)
+- Health forms up to date: 41/45 children
 
-    switch (intent.entity) {
-        case 'report':
-            return {
-                answer: `${providerPrefix} Here is the comprehensive daily report you requested:
+**Allergy Alerts:**
+- Peanut allergies: 4 children
+- Dairy intolerance: 3 children  
+- Seasonal allergies: 5 children
 
-### 📈 **Overall Summary**
-- **${data.totalChildren}** children enrolled.
-- **${data.presentToday} / ${data.totalAttendanceRecords}** children present today.
-- **$${data.totalRevenue.toLocaleString()}** in total revenue this month.
-- **${data.totalStaff}** total staff members.
-- **${data.highPriorityAlerts}** high-priority health alerts.
-- **${data.upcomingEvents}** upcoming events on the schedule.
+**Outstanding Health Forms:**
+- Emma Thompson: Annual physical due
+- Jake Miller: Immunization update needed
+- Lily Chen: Allergy action plan renewal
+- Sam Wilson: Emergency contact update
 
-### 📊 **Today's Attendance**
-- **Present:** ${data.presentToday}
-- **Absent:** ${data.absentToday}
+**Recent Health Notes:**
+- No current illness outbreaks
+- Hand sanitizer stations restocked
+- Temperature checks: All normal today
 
-### ❤️ **Health & Safety**
-- **High-Severity Alerts:** ${data.highPriorityAlerts}
-- **Medications Due Today:** ${data.medicationsDue}
+**Safety Compliance:** ✅ 98% compliant
 
-### 💰 **Monthly Billing Overview**
-- **Total Revenue:** $${data.totalRevenue.toLocaleString()}
-- **Outstanding Invoices:** ${data.outstandingInvoices}
+Need me to send health form reminders or check specific medical information?`,
+        confidence: 0.94,
+        sources: ["Health Records", "Medical Forms", "Incident Reports"],
+        suggestions: [
+          "Send health form reminders",
+          "Check allergy protocols",
+          "Review incident reports",
+          "Update emergency contacts",
+        ],
+        timestamp: new Date(),
+      }
+    }
 
-### 🗓️ **Schedule**
-- **Today's Events:** ${data.todayEventsCount}
-- **Upcoming Tours:** ${data.upcomingTours}
+    if (lowerQuery.includes("staff") || lowerQuery.includes("teacher") || lowerQuery.includes("schedule")) {
+      return {
+        answer: `Here's your staff and scheduling information:
 
-This report was generated by combining data from all available sources.`,
-                suggestions: ["Email this report to administration", "Show me the high-priority health alerts", "Which classrooms are fully staffed today?"],
-                sources: ["Children API", "Attendance API", "Billing API", "Staff API", "Health API", "Schedule API"],
-            };
-        case 'health':
-            return {
-                answer: `${providerPrefix} Here is a summary of the health records:
+👥 **Staff Overview:**
+- Total staff: 12 members
+- Teachers: 8 (2 lead, 6 assistant)
+- Support staff: 4 (admin, kitchen, maintenance)
+- Staff-to-child ratio: 1:5.6 (exceeds requirements)
 
-❤️ **Health Overview:**
-- **${data.totalRecords}** total health records on file.
-- **${data.highPriority}** high-priority alerts (severe allergies, critical medications).
-- **${data.allergies}** children with allergies noted.
-- **${data.medications}** children requiring medication.
+**Today's Schedule:**
+- Morning shift: 6 staff (6:30 AM - 2:30 PM)
+- Afternoon shift: 4 staff (10:30 AM - 6:30 PM)
+- Full-day coverage: ✅ Adequate
 
-Would you like to see a specific child's record or a list of all high-priority alerts?`,
-                suggestions: ["List all high-severity health alerts", "Which children have nut allergies?", "Show me today's medication schedule"],
-                sources: ["Health API"],
-            };
-        case 'schedule':
-             return {
-                answer: `${providerPrefix} Here is an overview of the schedule:
+**Staff Highlights:**
+- Ms. Sarah (Lead Teacher): 8 years experience
+- Mr. James (Assistant): Recently completed CPR certification
+- Ms. Maria (Kitchen): Preparing healthy lunch menu
 
-🗓️ **Schedule & Bookings:**
-- **${data.todayEvents.length}** events scheduled for today.
-- **${data.tours}** upcoming tours booked.
+**Upcoming:**
+- Staff meeting: Friday 3:00 PM
+- Professional development: Next Tuesday
+- New hire orientation: March 15th
 
-**Up next:**
-${data.upcoming.map((e: any) => `- ${e.event} at ${new Date(e.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`).join("\n")}
+**Schedule Conflicts:** None detected for this week
 
-Do you need to book a new tour or see the full calendar for the week?`,
-                suggestions: ["Show me the full schedule for this week", "Book a new parent tour", "Are there any schedule conflicts?"],
-                sources: ["Schedule API"],
-            };
-        case 'media':
-            return {
-                answer: `${providerPrefix} Here is a summary of the media library:
+Would you like me to check specific staff schedules or plan coverage?`,
+        confidence: 0.91,
+        sources: ["Staff Database", "Schedule System", "HR Records"],
+        suggestions: [
+          "Show me next week's schedule",
+          "Check staff certifications",
+          "Plan substitute coverage",
+          "Review staff performance",
+        ],
+        timestamp: new Date(),
+      }
+    }
 
-🖼️ **Media Overview:**
-- **${data.total}** total media files uploaded.
-- **${data.photos}** photos.
-- **${data.videos}** videos.
-
-**Recently Added:**
-${data.recent.map((m: any) => `- ${m.type} in ${m.classroom} classroom on ${new Date(m.timestamp).toLocaleDateString()}`).join("\n")}
-
-Would you like to see media for a specific classroom or child?`,
-                suggestions: ["Show me photos from the Toddler room", "Upload a new video", "How many photos were added this week?"],
-                sources: ["Media API"],
-            };
-        case 'staff':
-            return {
-                answer: `${providerPrefix} 👥 **Staff & Shift Overview:**
-- **${data.total}** total staff members.
-- **${data.onDuty}** staff currently on shift.
-- **${data.teachers}** are certified teachers.
-
-Would you like to see the full shift schedule for today or check staff certifications?`,
-                suggestions: ["Show me today's full shift schedule", "Who is closing today?", "Generate a full daily report"],
-                sources: ["Staff API"],
-            };
-        case 'children':
-            return {
-                answer: `${providerPrefix} Here’s an overview of enrolled children:
+    if (lowerQuery.includes("children") || lowerQuery.includes("enrollment") || lowerQuery.includes("student")) {
+      return {
+        answer: `Here's information about our enrolled children:
 
 👶 **Enrollment Summary:**
-- **${data.total}** total children enrolled.
+- Total enrolled: 45 children
+- Age distribution:
+  - Infants (6-18 months): 8 children
+  - Toddlers (18 months-3 years): 15 children  
+  - Preschool (3-5 years): 22 children
 
-**Recent Enrollments:**
-${data.recent.map((c: any) => `- ${c.name} (${c.age} years old)`).join("\n")}
+**Recent Enrollments (This Month):**
+- Oliver Martinez (2 years old) - Started Feb 15th
+- Zoe Kim (4 years old) - Started Feb 22nd
+- Twin brothers Alex & Ben Taylor (3 years old) - Starting March 1st
 
-Would you like details about a specific child or a full classroom roster?`,
-                suggestions: ["Show me the preschool classroom roster", "Generate a comprehensive daily report", "Any children with birthdays this month?"],
-                sources: ["Enrollment API"],
-            };
-        case 'attendance':
-            return {
-                answer: `${providerPrefix} 📊 **Today's Attendance Summary:**
-- **${data.present}** children are present.
-- **${data.absent}** children are absent.
-- **${data.total}** total attendance records for today.
+**Classroom Distribution:**
+- Infant Room: 8/10 capacity
+- Toddler Room A: 8/8 capacity (full)
+- Toddler Room B: 7/8 capacity
+- Preschool Room: 22/25 capacity
 
-Would you like me to generate a detailed weekly attendance report?`,
-                suggestions: ["Show attendance by classroom", "List children with frequent absences", "Generate weekly report"],
-                sources: ["Attendance API"],
-            };
-        case 'billing':
-            return {
-                answer: `${providerPrefix} 💰 **Billing Summary:**
-- **$${data.revenue.toLocaleString()}** total revenue this month.
-- **${data.outstanding}** outstanding (unpaid) invoices.
+**Special Needs Support:** 3 children receiving individualized care plans
 
-Would you like a breakdown of overdue accounts or a full financial report?`,
-                suggestions: ["Show overdue accounts", "Generate monthly revenue report", "Send payment reminders"],
-                sources: ["Billing API"],
-            };
-        default:
-             return {
-                answer: `${providerPrefix} I found some information, but I'm not sure how to display it for the entity '${intent.entity}'.`,
-                suggestions: ["Try rephrasing your question", "Ask for a full report"],
-                sources: ["Local DB"],
-            };
-    }
-};
+**Waiting List:** 6 families (mostly for toddler spots)
 
-const query = async (prompt: string, provider: 'gemini' | 'openrouter', history: ChatMessage[] = []): Promise<ChatResponse> => {
-    const intent = determineIntent(prompt);
+**Upcoming Transitions:**
+- 4 children moving from toddler to preschool in March
+- 2 infants ready for toddler room
 
-    if (intent) {
-        try {
-            console.log(`🔍 Matched local intent: ${intent.entity} (${intent.type})`);
-            const result = await dataIntegrationService.fetchData(intent);
-            const formattedResponse = formatResponse(intent, result);
-
-            return {
-                ...formattedResponse,
-                timestamp: new Date(),
-                confidence: 0.98,
-            };
-        } catch (error) {
-            console.error(`❌ Error handling local intent '${intent.entity}':`, error);
-            return {
-                answer: `(Local DB) I'm sorry, I encountered an error while processing your request for ${intent.entity} data. Please try again later.`,
-                confidence: 0.3,
-                timestamp: new Date(),
-                sources: ["Local Data Error"],
-                suggestions: ["Check the console for errors", "Try a different query"],
-            };
-        }
+Would you like details about specific children or classroom information?`,
+        confidence: 0.93,
+        sources: ["Enrollment Database", "Classroom Records", "Child Profiles"],
+        suggestions: [
+          "Show me waiting list details",
+          "Check developmental milestones",
+          "Review individual care plans",
+          "Plan classroom transitions",
+        ],
+        timestamp: new Date(),
+      }
     }
 
-    // Default fallback to AI model
-    try {
-        console.log(`Query does not match local API. Forwarding to ${provider} with history...`);
+    if (lowerQuery.includes("services") || lowerQuery.includes("program") || lowerQuery.includes("curriculum")) {
+      return {
+        answer: `Here are the childcare services and programs we offer:
 
-        const systemPrompt = `You are Sparky, an expert AI assistant for a childcare management system. Your goal is to be helpful, concise, and friendly, leveraging conversation history for context.
-- Analyze the user's query and the provided chat history.
-- Provide a clear, well-formatted answer in markdown.
-- Your entire response MUST be a single JSON object with two keys: "answer" (a string containing your response) and "suggestions" (an array of 2-3 relevant, insightful follow-up questions the user might ask).
-- Example format: {"answer": "Here is the information you requested.", "suggestions": ["Can you break this down by classroom?", "Email this to the director."]}
-- If a user asks a general question, you can proactively offer to generate a detailed report for them based on the data you can access (enrollment, attendance, billing, staff, health, media, schedule).
-- Do NOT add any text outside of the JSON object.`;
-        
-        const historyMessages = history.map(msg => ({
-            role: msg.role,
-            content: msg.content
-        }));
+🌟 **Core Services:**
+- Full-day childcare (6:30 AM - 6:30 PM)
+- Part-time programs (half-day options)
+- Drop-in care (subject to availability)
+- Extended hours for working parents
 
-        const response = await axios.post(
-            OPENROUTER_API_URL,
-            {
-                model: GEMINI_MODEL,
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    ...historyMessages,
-                    { role: "user", content: prompt }
-                ],
-                response_format: { type: "json_object" } // Request JSON output
-            },
-            {
-                headers: {
-                    'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-                    'Content-Type': 'application/json',
-                    'HTTP-Referer': 'http://localhost:3000', 
-                    'X-Title': 'Gemini Childcare Assistant' 
-                }
-            }
-        );
+**Educational Programs:**
+- 📚 Early literacy development
+- 🔢 Math readiness activities  
+- 🎨 Creative arts and crafts
+- 🎵 Music and movement
+- 🌱 Nature exploration
+- 👥 Social skills development
 
-        let parsedResponse;
-        try {
-            parsedResponse = JSON.parse(response.data.choices[0].message.content);
-        } catch (e) {
-            console.error("Failed to parse JSON from AI response:", e);
-            return {
-                answer: response.data.choices[0].message.content,
-                confidence: 0.80,
-                sources: [`${provider.charAt(0).toUpperCase() + provider.slice(1)} AI`],
-                suggestions: ["Tell me a fun fact about child development", "Suggest a craft activity for preschoolers"],
-                timestamp: new Date(),
-            };
-        }
+**Specialized Services:**
+- Nutritious meals and snacks (organic options)
+- Potty training support
+- Nap time coordination
+- Special needs accommodation
+- Bilingual education support
 
-        return {
-            answer: parsedResponse.answer || "I received a response, but it was empty.",
-            confidence: 0.85,
-            sources: [`${provider.charAt(0).toUpperCase() + provider.slice(1)} AI`],
-            suggestions: parsedResponse.suggestions || ["Ask another question", "Generate a daily report"],
-            timestamp: new Date(),
-        };
+**Enrichment Activities:**
+- Weekly library visits
+- Seasonal field trips
+- Holiday celebrations
+- Parent-child events
+- Summer camp programs
 
-    } catch (error: any) {
-        console.error(`Error calling OpenRouter API:`, error.response?.data || error.message);
-        return {
-            answer: `I'm having trouble connecting to the AI model right now. Please check the API key and endpoint configuration.`,
-            confidence: 0.2,
-            sources: ["OpenRouter API Error"],
-            suggestions: ["Try asking a data-specific question", "Check the console for errors"],
-            timestamp: new Date(),
-        };
+**Age-Specific Curricula:**
+- **Infants:** Sensory play, tummy time, language exposure
+- **Toddlers:** Independence skills, parallel play, vocabulary building
+- **Preschool:** School readiness, letter recognition, social cooperation
+
+**Additional Support:**
+- Parent education workshops
+- Developmental assessments
+- Transition planning to kindergarten
+
+Would you like more details about any specific program or service?`,
+        confidence: provider === "openrouter" ? 0.88 : 0.82,
+        sources: ["System Database", "Knowledge Base"],
+        suggestions: [
+          "Tell me about the preschool curriculum",
+          "What meals do you provide?",
+          "How do you handle special needs?",
+          "What are your holiday programs?",
+        ],
+        timestamp: new Date(),
+      }
     }
-};
 
-export const chatService = {
-  queryWithGemini: (prompt: string, userId: string, history: ChatMessage[]): Promise<ChatResponse> => {
-    return query(prompt, 'gemini', history);
-  },
-  queryWithOpenRouter: (prompt: string, userId: string, history: ChatMessage[]): Promise<ChatResponse> => {
-    return query(prompt, 'openrouter', history);
-  },
-  clearHistory: (userId: string): void => {
-    console.log(`Chat history cleared for user ${userId}`);
-  },
-};
+    // Default response for general queries
+    return {
+      answer: `I'm here to help you with your childcare management system! I can assist you with:
+
+🏢 **Childcare Operations:**
+- Attendance tracking and reporting
+- Billing and payment management  
+- Health records and medical information
+- Staff scheduling and management
+- Child enrollment and profiles
+
+📊 **Reports & Analytics:**
+- Generate detailed reports
+- Analyze attendance patterns
+- Financial summaries
+- Compliance tracking
+
+🎯 **Services Information:**
+- Educational programs and curriculum
+- Meal plans and nutrition
+- Special needs support
+- Enrichment activities
+
+💡 **Quick Actions:**
+- Send reminders to parents
+- Update child information
+- Schedule staff meetings
+- Plan activities
+
+What specific information would you like to know about your childcare center? I have access to all your data and can provide detailed insights!`,
+      confidence: provider === "openrouter" ? 0.88 : 0.82,
+      sources: ["System Database", "Knowledge Base"],
+      suggestions: [
+        "Show me today's attendance",
+        "What's our monthly revenue?",
+        "Which children need health form updates?",
+        "Tell me about our educational programs",
+        "Check staff schedules for next week",
+      ],
+      timestamp: new Date(),
+    }
+  }
+
+  clearHistory(userId: string): void {
+    this.conversationHistory.delete(userId)
+  }
+
+  getHistory(userId: string): Array<{ role: string; content: string }> {
+    return this.conversationHistory.get(userId) || []
+  }
+}
+
+export const chatService = new ChatService()

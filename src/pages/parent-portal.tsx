@@ -2,7 +2,6 @@ import { AppShell, Section } from "../components/app-shell"
 import { Card, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { Badge } from "../components/ui/badge"
-// Update the import path below if the Avatar component is located elsewhere
 import { Progress } from "../components/ui/progress"
 import { Separator } from "../components/ui/separator"
 import { useRBAC } from "../contexts/rbac"
@@ -21,6 +20,8 @@ import {
   Utensils,
   Moon,
   Shield,
+  Sparkles,
+  TrendingUp,
 } from "lucide-react"
 
 export default function ParentPortal() {
@@ -43,60 +44,90 @@ export default function ParentPortal() {
   return (
     <AppShell title="Parent Portal">
       <div className="space-y-6">
-        {/* Welcome Header */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 p-6 text-white">
-          <div className="relative z-10">
-            <h1 className="text-2xl font-bold text-balance">Welcome back, Michael!</h1>
-            <p className="mt-2 text-white/90">Here's what's happening with Emma today</p>
-          </div>
-          <div className="absolute right-4 top-4 opacity-20">
-            <Heart className="h-16 w-16" />
+        <div className="relative overflow-hidden rounded-3xl border shadow-2xl">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 opacity-95" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+
+          {/* Animated decorative elements */}
+          <div className="absolute top-6 right-8 w-32 h-32 bg-white/10 rounded-full blur-2xl animate-pulse" />
+          <div className="absolute bottom-8 left-8 w-24 h-24 bg-white/5 rounded-full blur-xl animate-bounce" />
+          <div className="absolute top-1/3 right-1/4 w-20 h-20 bg-white/10 rounded-full blur-lg animate-pulse delay-1000" />
+
+          <div className="relative z-10 p-8 md:p-12 text-white">
+            <div className="flex items-start gap-4">
+              <div className="inline-flex h-20 w-20 items-center justify-center bg-white/20 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 animate-bounce">
+                <Heart className="h-10 w-10 text-white drop-shadow-lg" />
+              </div>
+              <div className="flex-1">
+                <h1 className="text-4xl md:text-5xl font-bold leading-tight bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent drop-shadow-lg">
+                  Welcome back, Michael!
+                </h1>
+                <p className="mt-3 text-xl text-emerald-50/90 font-medium">Here's what's happening with Emma today</p>
+                <div className="flex items-center gap-6 mt-4 text-emerald-100/80">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-yellow-300" />
+                    <span className="text-sm font-medium">Great Day!</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-yellow-300" />
+                    <span className="text-sm font-medium">4 Activities</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-green-300" />
+                    <span className="text-sm font-medium">Excellent Progress</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Quick Stats Grid */}
         <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className="rounded-full bg-emerald-100 p-2">
-                <Clock className="h-4 w-4 text-emerald-600" />
+          <Card className="relative overflow-hidden border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:scale-105">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-600 opacity-10"></div>
+            <CardContent className="flex items-center gap-3 p-6">
+              <div className="rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 p-3 shadow-lg">
+                <Clock className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-sm font-medium">Check-in Time</p>
-                <p className="text-xs text-neutral-500">8:15 AM</p>
+                <p className="text-sm font-semibold text-gray-900">Check-in Time</p>
+                <p className="text-lg font-bold text-emerald-600">8:15 AM</p>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className="rounded-full bg-teal-100 p-2">
-                <Activity className="h-4 w-4 text-teal-600" />
+          <Card className="relative overflow-hidden border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:scale-105">
+            <div className="absolute inset-0 bg-gradient-to-br from-teal-500 to-cyan-600 opacity-10"></div>
+            <CardContent className="flex items-center gap-3 p-6">
+              <div className="rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 p-3 shadow-lg">
+                <Activity className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-sm font-medium">Activities</p>
-                <p className="text-xs text-neutral-500">4 completed</p>
+                <p className="text-sm font-semibold text-gray-900">Activities</p>
+                <p className="text-lg font-bold text-teal-600">4 completed</p>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className="rounded-full bg-amber-100 p-2">
-                <Utensils className="h-4 w-4 text-amber-600" />
+          <Card className="relative overflow-hidden border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:scale-105">
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500 to-orange-600 opacity-10"></div>
+            <CardContent className="flex items-center gap-3 p-6">
+              <div className="rounded-full bg-gradient-to-br from-amber-500 to-orange-600 p-3 shadow-lg">
+                <Utensils className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-sm font-medium">Meals</p>
-                <p className="text-xs text-neutral-500">Lunch eaten</p>
+                <p className="text-sm font-semibold text-gray-900">Meals</p>
+                <p className="text-lg font-bold text-amber-600">Lunch eaten</p>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className="rounded-full bg-indigo-100 p-2">
-                <Moon className="h-4 w-4 text-indigo-600" />
+          <Card className="relative overflow-hidden border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:scale-105">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 opacity-10"></div>
+            <CardContent className="flex items-center gap-3 p-6">
+              <div className="rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 p-3 shadow-lg">
+                <Moon className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-sm font-medium">Nap Time</p>
-                <p className="text-xs text-neutral-500">1.5 hours</p>
+                <p className="text-sm font-semibold text-gray-900">Nap Time</p>
+                <p className="text-lg font-bold text-indigo-600">1.5 hours</p>
               </div>
             </CardContent>
           </Card>
@@ -110,61 +141,63 @@ export default function ParentPortal() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    {/* <Avatar className="h-12 w-12">
-                      <AvatarImage src="/happy-child.png" />
-                      <AvatarFallback>EB</AvatarFallback>
-                    </Avatar> */}
+                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                      EB
+                    </div>
                     <div>
                       <h3 className="font-semibold">Emma Brown</h3>
                       <p className="text-sm text-neutral-500">Room: Sunshine Class</p>
                     </div>
                   </div>
-                  <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">
-                    Great Day!
+                  <Badge
+                    variant="secondary"
+                    className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg"
+                  >
+                    ⭐ Great Day!
                   </Badge>
                 </div>
 
                 <Separator />
 
                 <div className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-full bg-emerald-100 p-1.5 mt-0.5">
-                      <BookOpen className="h-3 w-3 text-emerald-600" />
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 hover:shadow-md transition-all duration-200">
+                    <div className="rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 p-2 mt-0.5 shadow-lg">
+                      <BookOpen className="h-4 w-4 text-white" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium">Learning Activities</p>
-                      <p className="text-xs text-neutral-500">
+                      <p className="text-sm font-semibold text-gray-900">Learning Activities</p>
+                      <p className="text-xs text-neutral-600 mt-1">
                         Emma participated in story time and practiced writing letters. She showed great focus during art
                         class.
                       </p>
                     </div>
-                    <span className="text-xs text-neutral-500">10:30 AM</span>
+                    <span className="text-xs text-neutral-500 font-medium">10:30 AM</span>
                   </div>
 
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-full bg-teal-100 p-1.5 mt-0.5">
-                      <Utensils className="h-3 w-3 text-teal-600" />
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-gradient-to-r from-teal-50 to-cyan-50 hover:shadow-md transition-all duration-200">
+                    <div className="rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 p-2 mt-0.5 shadow-lg">
+                      <Utensils className="h-4 w-4 text-white" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium">Lunch Time</p>
-                      <p className="text-xs text-neutral-500">
+                      <p className="text-sm font-semibold text-gray-900">Lunch Time</p>
+                      <p className="text-xs text-neutral-600 mt-1">
                         Ate most of her sandwich and all of her fruit. Tried new vegetables today!
                       </p>
                     </div>
-                    <span className="text-xs text-neutral-500">12:00 PM</span>
+                    <span className="text-xs text-neutral-500 font-medium">12:00 PM</span>
                   </div>
 
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-full bg-indigo-100 p-1.5 mt-0.5">
-                      <Moon className="h-3 w-3 text-indigo-600" />
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 hover:shadow-md transition-all duration-200">
+                    <div className="rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 p-2 mt-0.5 shadow-lg">
+                      <Moon className="h-4 w-4 text-white" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium">Rest Time</p>
-                      <p className="text-xs text-neutral-500">
+                      <p className="text-sm font-semibold text-gray-900">Rest Time</p>
+                      <p className="text-xs text-neutral-600 mt-1">
                         Had a peaceful nap for 1.5 hours. Woke up refreshed and ready to play.
                       </p>
                     </div>
-                    <span className="text-xs text-neutral-500">1:00 PM</span>
+                    <span className="text-xs text-neutral-500 font-medium">1:00 PM</span>
                   </div>
                 </div>
               </div>
@@ -178,14 +211,17 @@ export default function ParentPortal() {
                     <img
                       src={`/galerie.jpg`}
                       alt={`Activity photo ${i}`}
-                      className="aspect-square rounded-lg object-cover transition-transform group-hover:scale-105"
+                      className="aspect-square rounded-xl object-cover transition-transform group-hover:scale-105 shadow-lg"
                     />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors" />
-                    <Camera className="absolute top-2 right-2 h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 rounded-xl transition-opacity" />
+                    <Camera className="absolute top-2 right-2 h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
                   </div>
                 ))}
               </div>
-              <Button variant="outline" className="w-full mt-4 bg-transparent">
+              <Button
+                variant="outline"
+                className="w-full mt-4 bg-transparent border-2 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50"
+              >
                 <Camera className="mr-2 h-4 w-4" />
                 View All Photos
               </Button>
@@ -197,19 +233,31 @@ export default function ParentPortal() {
             {/* Quick Actions */}
             <Section title="Quick Actions">
               <div className="space-y-3">
-                <Button className="w-full justify-start bg-transparent" variant="outline">
+                <Button
+                  className="w-full justify-start bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg"
+                  variant="default"
+                >
                   <MessageCircle className="mr-2 h-4 w-4" />
                   Message Teacher
                 </Button>
-                <Button className="w-full justify-start bg-transparent" variant="outline">
+                <Button
+                  className="w-full justify-start bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg"
+                  variant="default"
+                >
                   <Calendar className="mr-2 h-4 w-4" />
                   Schedule Meeting
                 </Button>
-                <Button className="w-full justify-start bg-transparent" variant="outline">
+                <Button
+                  className="w-full justify-start bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg"
+                  variant="default"
+                >
                   <FileText className="mr-2 h-4 w-4" />
                   View Reports
                 </Button>
-                <Button className="w-full justify-start bg-transparent" variant="outline">
+                <Button
+                  className="w-full justify-start bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg"
+                  variant="default"
+                >
                   <User className="mr-2 h-4 w-4" />
                   Update Profile
                 </Button>
@@ -219,33 +267,33 @@ export default function ParentPortal() {
             {/* Upcoming Events */}
             <Section title="Upcoming Events">
               <div className="space-y-3">
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-neutral-50">
-                  <div className="rounded-full bg-emerald-100 p-1.5 mt-0.5">
-                    <Calendar className="h-3 w-3 text-emerald-600" />
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 hover:shadow-md transition-all duration-200">
+                  <div className="rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 p-2 mt-0.5 shadow-lg">
+                    <Calendar className="h-4 w-4 text-white" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium">Parent-Teacher Conference</p>
-                    <p className="text-xs text-neutral-500">Tomorrow, 3:00 PM</p>
+                    <p className="text-sm font-semibold text-gray-900">Parent-Teacher Conference</p>
+                    <p className="text-xs text-neutral-600 mt-1">Tomorrow, 3:00 PM</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-neutral-50">
-                  <div className="rounded-full bg-teal-100 p-1.5 mt-0.5">
-                    <Star className="h-3 w-3 text-teal-600" />
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-gradient-to-r from-teal-50 to-cyan-50 hover:shadow-md transition-all duration-200">
+                  <div className="rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 p-2 mt-0.5 shadow-lg">
+                    <Star className="h-4 w-4 text-white" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium">Spring Festival</p>
-                    <p className="text-xs text-neutral-500">Friday, 10:00 AM</p>
+                    <p className="text-sm font-semibold text-gray-900">Spring Festival</p>
+                    <p className="text-xs text-neutral-600 mt-1">Friday, 10:00 AM</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-neutral-50">
-                  <div className="rounded-full bg-amber-100 p-1.5 mt-0.5">
-                    <Camera className="h-3 w-3 text-amber-600" />
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 hover:shadow-md transition-all duration-200">
+                  <div className="rounded-full bg-gradient-to-br from-amber-500 to-orange-600 p-2 mt-0.5 shadow-lg">
+                    <Camera className="h-4 w-4 text-white" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium">Picture Day</p>
-                    <p className="text-xs text-neutral-500">Next Monday</p>
+                    <p className="text-sm font-semibold text-gray-900">Picture Day</p>
+                    <p className="text-xs text-neutral-600 mt-1">Next Monday</p>
                   </div>
                 </div>
               </div>
@@ -255,22 +303,29 @@ export default function ParentPortal() {
             <Section title="Emma's Teacher">
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  {/* <Avatar>
-                    <AvatarImage src="/teacher-woman.png" />
-                    <AvatarFallback>MS</AvatarFallback>
-                  </Avatar> */}
+                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                    SJ
+                  </div>
                   <div>
-                    <p className="font-medium">Ms. Sarah Johnson</p>
+                    <p className="font-semibold text-gray-900">Ms. Sarah Johnson</p>
                     <p className="text-sm text-neutral-500">Lead Teacher</p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start bg-transparent border-2 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50"
+                  >
                     <MessageCircle className="mr-2 h-3 w-3" />
                     Send Message
                   </Button>
-                  <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start bg-transparent border-2 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50"
+                  >
                     <Phone className="mr-2 h-3 w-3" />
                     Call Teacher
                   </Button>
@@ -282,35 +337,35 @@ export default function ParentPortal() {
             <Section title="Development Progress">
               <div className="space-y-4">
                 <div>
-                  <div className="flex justify-between text-sm mb-2">
+                  <div className="flex justify-between text-sm mb-2 font-semibold">
                     <span>Social Skills</span>
-                    <span>85%</span>
+                    <span className="text-emerald-600">85%</span>
                   </div>
-                  <Progress value={85} className="h-2" />
+                  <Progress value={85} className="h-3 bg-gray-200" />
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-sm mb-2">
+                  <div className="flex justify-between text-sm mb-2 font-semibold">
                     <span>Language Development</span>
-                    <span>78%</span>
+                    <span className="text-blue-600">78%</span>
                   </div>
-                  <Progress value={78} className="h-2" />
+                  <Progress value={78} className="h-3 bg-gray-200" />
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-sm mb-2">
+                  <div className="flex justify-between text-sm mb-2 font-semibold">
                     <span>Motor Skills</span>
-                    <span>92%</span>
+                    <span className="text-purple-600">92%</span>
                   </div>
-                  <Progress value={92} className="h-2" />
+                  <Progress value={92} className="h-3 bg-gray-200" />
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-sm mb-2">
+                  <div className="flex justify-between text-sm mb-2 font-semibold">
                     <span>Creative Expression</span>
-                    <span>88%</span>
+                    <span className="text-pink-600">88%</span>
                   </div>
-                  <Progress value={88} className="h-2" />
+                  <Progress value={88} className="h-3 bg-gray-200" />
                 </div>
               </div>
             </Section>
