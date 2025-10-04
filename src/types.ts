@@ -81,3 +81,30 @@ export interface ChildRow {
   firstName: string;
   lastName: string;
 }
+
+
+
+export type StaffRole = "director" | "teacher" | "assistant" | "substitute" | "admin";
+export type StaffStatus = "active" | "inactive" | "on-leave";
+
+export interface StaffMember {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  role: StaffRole;
+  status: StaffStatus;
+  hireDate: string;
+  address: string;
+  emergencyContact: {
+    name: string;
+    phone: string;
+    relationship: string;
+  };
+  certifications: string[];
+  hourlyRate: number;
+  weeklyHours: number;
+  notes: string;
+  avatar?: string;
+}

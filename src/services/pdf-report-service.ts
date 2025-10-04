@@ -19,7 +19,7 @@ interface ReportData {
 class PDFReportService {
   generateDailyReport(data: ReportData, brandName = "Salam Nest"): jsPDF {
     try {
-      console.log("[v0] Starting PDF generation with data:", data)
+      console.log("Starting PDF generation with data:", data)
 
       const doc = new jsPDF()
       const pageWidth = doc.internal.pageSize.getWidth()
@@ -212,23 +212,23 @@ class PDFReportService {
       doc.setLineWidth(0.5)
       doc.rect(5, 5, pageWidth - 10, pageHeight - 10)
 
-      console.log("[v0] PDF generation completed successfully")
+      console.log("PDF generation completed successfully")
       return doc
     } catch (error) {
-      console.error("[v0] Error generating PDF:", error)
+      console.error("Error generating PDF:", error)
       throw new Error(`Failed to generate PDF report: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
   }
 
   downloadReport(data: ReportData, brandName = "Salam Nest"): void {
     try {
-      console.log("[v0] Attempting to download PDF report")
+      console.log("Attempting to download PDF report")
       const doc = this.generateDailyReport(data, brandName)
       const fileName = `${brandName.replace(/\s+/g, "_")}_Daily_Report_${new Date().toISOString().split("T")[0]}.pdf`
       doc.save(fileName)
-      console.log("[v0] PDF downloaded successfully:", fileName)
+      console.log("PDF downloaded successfully:", fileName)
     } catch (error) {
-      console.error("[v0] Error downloading PDF:", error)
+      console.error("Error downloading PDF:", error)
       throw error
     }
   }
@@ -238,7 +238,7 @@ class PDFReportService {
       const doc = this.generateDailyReport(data, brandName)
       return doc.output("dataurlstring")
     } catch (error) {
-      console.error("[v0] Error previewing PDF:", error)
+      console.error("Error previewing PDF:", error)
       throw error
     }
   }

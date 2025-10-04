@@ -56,7 +56,7 @@ export default function Settings() {
           </div>
         </Section>
 
-        <Section title="Compliance" description="GDPR / HIPAA and parental consent controls.">
+        {/* <Section title="Compliance" description="GDPR / HIPAA and parental consent controls.">
           <div className="grid md:grid-cols-3 gap-4 items-center">
             <div className="flex items-center gap-3">
               <input type="checkbox" id="gdpr" checked={gdpr} onChange={(e) => setGdpr(e.target.checked)} />
@@ -79,7 +79,7 @@ export default function Settings() {
             />
             <div className="text-xs text-neutral-500">Logs should be immutable and retained per compliance policy.</div>
           </div>
-        </Section>
+        </Section> */}
       </div>
     </AppShell>
   )

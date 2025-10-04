@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useEffect } from "react"
@@ -81,6 +82,8 @@ export default function Media() {
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isLoading, setIsLoading] = React.useState(false)
   const [aiAssistantOpen, setAiAssistantOpen] = React.useState(false)
+  const [viewingItem, setViewingItem] = React.useState<MediaItem | null>(null)
+
 
   const [uploadFormData, setUploadFormData] = React.useState({
     files: [] as File[],
@@ -440,7 +443,7 @@ export default function Media() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => window.open(item.url, "_blank")}
+                          onClick={() => setViewingItem(item)}
                           className="h-10 w-10 p-0 bg-white/90 hover:bg-white rounded-full shadow-lg backdrop-blur-sm border border-white/50"
                         >
                           <Eye className="h-4 w-4 text-blue-600" />
@@ -527,7 +530,7 @@ export default function Media() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => window.open(item.url, "_blank")}
+                        onClick={() => setViewingItem(item)}
                         className="h-12 w-12 p-0 bg-blue-50 hover:bg-blue-100 rounded-full shadow-lg border-2 border-blue-200"
                       >
                         <Eye className="h-5 w-5 text-blue-600" />
@@ -584,6 +587,43 @@ export default function Media() {
             </div>
           </div>
         )}
+
+        {/* Media Viewer Dialog */}
+        <Dialog open={!!viewingItem} onOpenChange={() => setViewingItem(null)}>
+          <DialogContent className="max-w-6xl w-full p-0 bg-gray-900/70 backdrop-blur-2xl border-white/10 text-pink-700 rounded-3xl shadow-2xl overflow-hidden">
+            {viewingItem && (
+              <div>
+                <DialogHeader className="p-6 border-b border-white/10">
+                  <DialogTitle className="text-2xl font-bold">{viewingItem.title || "Media Viewer"}</DialogTitle>
+                </DialogHeader>
+                <DialogBody className="p-2 sm:p-4 md:p-6 flex justify-center items-center">
+                  {viewingItem.type === "image" ? (
+                    <img
+                      src="/galerie.jpg" // Using the hardcoded image as in the original component
+                      alt={viewingItem.title || ""}
+                      className="w-full h-auto max-h-[75vh] object-contain rounded-xl"
+                    />
+                  ) : (
+                    <video
+                      src={viewingItem.url}
+                      controls
+                      autoPlay
+                      className="w-full h-auto max-h-[75vh] object-contain rounded-xl bg-black"
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  )}
+                </DialogBody>
+                {viewingItem.description && (
+                  <DialogFooter className="p-6 bg-black/20 border-t border-white/10">
+                    <DialogDescription className="text-base text-white/80">{viewingItem.description}</DialogDescription>
+                  </DialogFooter>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
 
         {/* Enhanced Upload Dialog */}
         <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>

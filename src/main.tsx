@@ -7,7 +7,6 @@ import App from "./routes/app"
 import Dashboard from "./pages/dashboard"
 import Attendance from "./pages/attendance"
 import Children from "./pages/children"
-// import Health from "./pages/health"
 import Billing from "./pages/billing"
 import Scheduling from "./pages/scheduling"
 import Messages from "./pages/messages"
@@ -48,7 +47,7 @@ const router = createBrowserRouter([
       { path: "booking", element: <Booking /> },
       { path: "staff", element: <Staff /> },
       { path: "parent-portal", element: <ParentPortal /> },
-      // { path: "user-management", element: <UserManagement /> },
+      { path: "user-management", element: <UserManagement /> },
       { path: "chat", element: <ChatPage /> },
       { path: "settings", element: <Settings /> },
       

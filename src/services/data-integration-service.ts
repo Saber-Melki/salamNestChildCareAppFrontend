@@ -1,5 +1,5 @@
 interface QueryIntent {
-  entity: "children" | "attendance" | "billing" | "staff" | "health" | "schedule" | "media" | "report"
+  entity: "children" | "attendance" | "billing" | "health" | "media" | "report" | "shift" | "booking" | "event" | "album" | "staff"
   type: "list" | "analyze" | "generate"
   filters?: Record<string, any>
   timeframe?: string
@@ -20,140 +20,180 @@ const API_BASE_URL = "http://localhost:8080"
 const api = {
   children: {
     getAll: async () => {
-      console.log("[v0] Fetching from:", `${API_BASE_URL}/children`)
+      console.log("Fetching from:", `${API_BASE_URL}/children`)
       try {
         const response = await fetch(`${API_BASE_URL}/children`)
-        console.log("[v0] Children API response status:", response.status)
+        console.log("Children API response status:", response.status)
         if (!response.ok) {
           const errorText = await response.text()
-          console.error("[v0] Children API error:", errorText)
+          console.error("Children API error:", errorText)
           throw new Error(`Failed to fetch children: ${response.statusText}`)
         }
         const data = await response.json()
-        console.log("[v0] Children data received:", data)
+        console.log("Children data received:", data)
         return data
       } catch (error) {
-        console.error("[v0] Children API fetch error:", error)
+        console.error("Children API fetch error:", error)
         throw error
       }
     },
   },
   attendance: {
     getAll: async () => {
-      console.log("[v0] Fetching from:", `${API_BASE_URL}/attendance`)
+      console.log("Fetching from:", `${API_BASE_URL}/attendance`)
       try {
         const response = await fetch(`${API_BASE_URL}/attendance`)
-        console.log("[v0] Attendance API response status:", response.status)
+        console.log("Attendance API response status:", response.status)
         if (!response.ok) {
           const errorText = await response.text()
-          console.error("[v0] Attendance API error:", errorText)
+          console.error("Attendance API error:", errorText)
           throw new Error(`Failed to fetch attendance: ${response.statusText}`)
         }
         const data = await response.json()
-        console.log("[v0] Attendance data received:", data)
+        console.log("Attendance data received:", data)
         return data
       } catch (error) {
-        console.error("[v0] Attendance API fetch error:", error)
+        console.error("Attendance API fetch error:", error)
         throw error
       }
     },
   },
   billing: {
     getAll: async () => {
-      console.log("[v0] Fetching from:", `${API_BASE_URL}/billing`)
+      console.log("Fetching from:", `${API_BASE_URL}/billing`)
       try {
         const response = await fetch(`${API_BASE_URL}/billing`)
-        console.log("[v0] Billing API response status:", response.status)
+        console.log("Billing API response status:", response.status)
         if (!response.ok) {
           const errorText = await response.text()
-          console.error("[v0] Billing API error:", errorText)
+          console.error("Billing API error:", errorText)
           throw new Error(`Failed to fetch billing: ${response.statusText}`)
         }
         const data = await response.json()
-        console.log("[v0] Billing data received:", data)
+        console.log("Billing data received:", data)
         return data
       } catch (error) {
-        console.error("[v0] Billing API fetch error:", error)
+        console.error("Billing API fetch error:", error)
         throw error
       }
     },
   },
-  staff: {
+  shift: {
     getAll: async () => {
-      console.log("[v0] Fetching from:", `${API_BASE_URL}/staff`)
+      console.log("Fetching from:", `${API_BASE_URL}/shift`)
       try {
-        const response = await fetch(`${API_BASE_URL}/staff`)
-        console.log("[v0] Staff API response status:", response.status)
+        const response = await fetch(`${API_BASE_URL}/shift`)
+        console.log("Shift API response status:", response.status)
         if (!response.ok) {
           const errorText = await response.text()
-          console.error("[v0] Staff API error:", errorText)
-          throw new Error(`Failed to fetch staff: ${response.statusText}`)
+          console.error("Shift API error:", errorText)
+          throw new Error(`Failed to fetch shift: ${response.statusText}`)
         }
         const data = await response.json()
-        console.log("[v0] Staff data received:", data)
+        console.log("Shift data received:", data)
         return data
       } catch (error) {
-        console.error("[v0] Staff API fetch error:", error)
+        console.error("Shift API fetch error:", error)
         throw error
       }
     },
   },
   health: {
     getAll: async () => {
-      console.log("[v0] Fetching from:", `${API_BASE_URL}/health`)
+      console.log("Fetching from:", `${API_BASE_URL}/health`)
       try {
         const response = await fetch(`${API_BASE_URL}/health`)
-        console.log("[v0] Health API response status:", response.status)
+        console.log("Health API response status:", response.status)
         if (!response.ok) {
           const errorText = await response.text()
-          console.error("[v0] Health API error:", errorText)
+          console.error("Health API error:", errorText)
           throw new Error(`Failed to fetch health: ${response.statusText}`)
         }
         const data = await response.json()
-        console.log("[v0] Health data received:", data)
+        console.log("Health data received:", data)
         return data
       } catch (error) {
-        console.error("[v0] Health API fetch error:", error)
+        console.error("Health API fetch error:", error)
         throw error
       }
     },
   },
-  schedule: {
+  event: {
     getAll: async () => {
-      console.log("[v0] Fetching from:", `${API_BASE_URL}/schedule`)
+      console.log("Fetching from:", `${API_BASE_URL}/calendar/events`)
       try {
-        const response = await fetch(`${API_BASE_URL}/schedule`)
-        console.log("[v0] Schedule API response status:", response.status)
+        const response = await fetch(`${API_BASE_URL}/calendar/events`)
+        console.log("Event API response status:", response.status)
         if (!response.ok) {
           const errorText = await response.text()
-          console.error("[v0] Schedule API error:", errorText)
-          throw new Error(`Failed to fetch schedule: ${response.statusText}`)
+          console.error("Event API error:", errorText)
+          throw new Error(`Failed to fetch event: ${response.statusText}`)
         }
         const data = await response.json()
-        console.log("[v0] Schedule data received:", data)
+        console.log("Event data received:", data)
         return data
       } catch (error) {
-        console.error("[v0] Schedule API fetch error:", error)
+        console.error("Event API fetch error:", error)
+        throw error
+      }
+    },
+  },
+  booking: {
+    getAll: async () => {
+      console.log("Fetching from:", `${API_BASE_URL}/bookings`)
+      try {
+        const response = await fetch(`${API_BASE_URL}/bookings`)
+        console.log("Booking API response status:", response.status)
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error("Booking API error:", errorText)
+          throw new Error(`Failed to fetch booking: ${response.statusText}`)
+        }
+        const data = await response.json()
+        console.log("Booking data received:", data)
+        return data
+      } catch (error) {
+        console.error("Booking API fetch error:", error)
         throw error
       }
     },
   },
   media: {
     getAll: async () => {
-      console.log("[v0] Fetching from:", `${API_BASE_URL}/media`)
+      console.log("Fetching from:", `${API_BASE_URL}/media/items`)
       try {
-        const response = await fetch(`${API_BASE_URL}/media`)
-        console.log("[v0] Media API response status:", response.status)
+        const response = await fetch(`${API_BASE_URL}/media/items`)
+        console.log("Media API response status:", response.status)
         if (!response.ok) {
           const errorText = await response.text()
-          console.error("[v0] Media API error:", errorText)
+          console.error("Media API error:", errorText)
           throw new Error(`Failed to fetch media: ${response.statusText}`)
         }
         const data = await response.json()
-        console.log("[v0] Media data received:", data)
+        console.log("Media data received:", data)
         return data
       } catch (error) {
-        console.error("[v0] Media API fetch error:", error)
+        console.error("Media API fetch error:", error)
+        throw error
+      }
+    },
+  },
+  staff: {
+    getAll: async () => {
+      console.log("Fetching from:", `${API_BASE_URL}/staff`)
+      try {
+        const response = await fetch(`${API_BASE_URL}/staff`)
+        console.log("Staff API response status:", response.status)
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error("Staff API error:", errorText)
+          throw new Error(`Failed to fetch staff: ${response.statusText}`)
+        }
+        const data = await response.json()
+        console.log("Staff data received:", data)
+        return data
+      } catch (error) {
+        console.error("Staff API fetch error:", error)
         throw error
       }
     },
@@ -176,14 +216,18 @@ class DataIntegrationService {
           return await this.fetchAttendanceData(type, filters, timeframe)
         case "billing":
           return await this.fetchBillingData(type, filters, timeframe)
-        case "staff":
-          return await this.fetchStaffData(type, filters, timeframe)
+        case "shift":
+          return await this.fetchShiftData(type, filters, timeframe)
         case "health":
           return await this.fetchHealthData(type, filters, timeframe)
-        case "schedule":
-          return await this.fetchScheduleData(type, filters, timeframe)
         case "media":
           return await this.fetchMediaData(type, filters, timeframe)
+        case "event":
+          return await this.fetchEventData(type, filters, timeframe)
+        case "booking":
+          return await this.fetchBookingData(type, filters, timeframe)
+        case "staff":
+          return await this.fetchStaffData(type, filters, timeframe)
         default:
           throw new Error(`Unsupported entity: ${entity}`)
       }
@@ -194,19 +238,24 @@ class DataIntegrationService {
   }
 
   private async fetchReportData(): Promise<DataResult> {
-    console.log("[v0] Starting comprehensive report data fetch...")
+    console.log("Starting comprehensive report data fetch...")
 
     try {
-      const [children, attendance, billing, staff, health, schedule] = await Promise.all([
+      const [children, attendance, billing, staff, health, shift, event, booking] = await Promise.all([
         api.children.getAll(),
         api.attendance.getAll(),
         api.billing.getAll(),
-        api.staff.getAll(),
         api.health.getAll(),
-        api.schedule.getAll(),
+        api.shift.getAll(),
+        api.event.getAll(),
+        api.media.getAll(),
+        api.booking.getAll(),
+        api.staff.getAll(),
+
+
       ])
 
-      console.log("[v0] All API calls completed successfully")
+      console.log("All API calls completed successfully")
 
       const today = new Date().toISOString().split("T")[0]
       const todayRecords = attendance.filter((a: any) => a.date?.startsWith(today) || a.timestamp?.startsWith(today))
@@ -218,22 +267,30 @@ class DataIntegrationService {
         totalAttendanceRecords: todayRecords.length || 0,
         totalRevenue: billing.reduce((sum: number, b: any) => sum + (b.amount || 0), 0),
         outstandingInvoices: billing.filter((b: any) => b.status === "unpaid" || b.status === "pending").length || 0,
-        totalStaff: staff.length || 0,
+        totalStaff: staff?.length || 0,
         highPriorityAlerts: health.filter((h: any) => h.severity === "high" || h.priority === "high").length || 0,
         medicationsDue: health.filter((h: any) => h.type === "medication").length || 0,
-        upcomingEvents: schedule.filter((e: any) => new Date(e.time || e.date) > new Date()).length || 0,
-        todayEventsCount: schedule.filter((e: any) => (e.time || e.date)?.startsWith(today)).length || 0,
-        upcomingTours: schedule.filter((e: any) => e.type === "tour").length || 0,
+        upcomingEvents: shift.filter((e: any) => new Date(e.time || e.date) > new Date()).length || 0,
+        todayEventsCount: shift.filter((e: any) => (e.time || e.date)?.startsWith(today)).length || 0,
+        upcomingTours: shift.filter((e: any) => e.type === "tour").length || 0,
+        totalMediaItems: event.length || 0,
+        photos: event.filter((m: any) => m.type === "photo").length || 0,
+        videos: event.filter((m: any) => m.type === "video").length || 0,
+        recentMedia: [...event]
+          .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+          .slice(0, 3),
+        timestamp: new Date().toISOString(),
+
       }
 
-      console.log("[v0] Report generated successfully:", report)
+      console.log("Report generated successfully:", report)
 
       return {
         data: report,
         metadata: { source: "multi-api-report", timestamp: new Date().toISOString() },
       }
     } catch (error) {
-      console.error("[v0] Error in fetchReportData:", error)
+      console.error("Error in fetchReportData:", error)
       throw error
     }
   }
@@ -255,6 +312,20 @@ class DataIntegrationService {
       data: allChildren,
       count: allChildren.length,
       metadata: { source: "children-api", timestamp: new Date().toISOString() },
+    }
+  }
+  private async fetchStaffData(type: string, filters?: Record<string, any>, timeframe?: string): Promise<DataResult> {
+    const allStaff = await api.staff.getAll()
+    if (type === "analyze") {
+      const active = allStaff.filter((s: any) => s.status === "active").length
+      const inactive = allStaff.filter((s: any) => s.status === "inactive").length
+      const data = { totalRecords: allStaff.length, active, inactive }
+      return { data, metadata: { source: "staff-api", timestamp: new Date().toISOString() } }
+    }
+    return {
+      data: allStaff,
+      count: allStaff.length,
+      metadata: { source: "staff-api", timestamp: new Date().toISOString() },
     }
   }
 
@@ -293,18 +364,18 @@ class DataIntegrationService {
     }
   }
 
-  private async fetchStaffData(type: string, filters?: Record<string, any>, timeframe?: string): Promise<DataResult> {
-    const allStaff = await api.staff.getAll()
+  private async fetchShiftData(type: string, filters?: Record<string, any>, timeframe?: string): Promise<DataResult> {
+    const allShift = await api.shift.getAll()
     if (type === "analyze") {
-      const onDuty = allStaff.filter((s: any) => s.onShift).length
-      const teachers = allStaff.filter((s: any) => s.role.toLowerCase().includes("teacher")).length
-      const data = { total: allStaff.length, onDuty, teachers }
-      return { data, metadata: { source: "staff-api", timestamp: new Date().toISOString() } }
+      const onDuty = allShift.filter((s: any) => s.onShift).length
+      const teachers = allShift.filter((s: any) => s.role.toLowerCase().includes("teacher")).length
+      const data = { total: allShift.length, onDuty, teachers }
+      return { data, metadata: { source: "shift-api", timestamp: new Date().toISOString() } }
     }
     return {
-      data: allStaff,
-      count: allStaff.length,
-      metadata: { source: "staff-api", timestamp: new Date().toISOString() },
+      data: allShift,
+      count: allShift.length,
+      metadata: { source: "shift-api", timestamp: new Date().toISOString() },
     }
   }
 
@@ -324,24 +395,38 @@ class DataIntegrationService {
     }
   }
 
-  private async fetchScheduleData(
+  private async fetchEventData(
     type: string,
     filters?: Record<string, any>,
     timeframe?: string,
   ): Promise<DataResult> {
-    const allSchedule = await api.schedule.getAll()
+    const allEvents = await api.event.getAll()
     if (type === "analyze") {
       const today = new Date().toISOString().split("T")[0]
-      const todayEvents = allSchedule.filter((e: any) => e.time.startsWith(today))
-      const tours = allSchedule.filter((e: any) => e.type === "tour").length
-      const upcoming = allSchedule.filter((e: any) => new Date(e.time) > new Date()).slice(0, 3)
+      const todayEvents = allEvents.filter((e: any) => e.time.startsWith(today))
+      const tours = allEvents.filter((e: any) => e.type === "tour").length
+      const upcoming = allEvents.filter((e: any) => new Date(e.time) > new Date()).slice(0, 3)
       const data = { todayEvents, tours, upcoming }
-      return { data, metadata: { source: "schedule-api", timestamp: new Date().toISOString() } }
+      return { data, metadata: { source: "event-api", timestamp: new Date().toISOString() } }
     }
     return {
-      data: allSchedule,
-      count: allSchedule.length,
-      metadata: { source: "schedule-api", timestamp: new Date().toISOString() },
+      data: allEvents,
+      count: allEvents.length,
+      metadata: { source: "event-api", timestamp: new Date().toISOString() },
+    }
+  }
+
+  private async fetchBookingData(type: string, filters?: Record<string, any>, timeframe?: string): Promise<DataResult> {
+    const allBookings = await api.booking.getAll()
+    if (type === "analyze") {
+      const upcoming = allBookings.filter((b: any) => new Date(b.startTime) > new Date()).length
+      const data = { total: allBookings.length, upcoming }
+      return { data, metadata: { source: "booking-api", timestamp: new Date().toISOString() } }
+    }
+    return {
+      data: allBookings,
+      count: allBookings.length,
+      metadata: { source: "booking-api", timestamp: new Date().toISOString() },
     }
   }
 
@@ -362,6 +447,7 @@ class DataIntegrationService {
       metadata: { source: "media-api", timestamp: new Date().toISOString() },
     }
   }
+  
 }
 
 export const dataIntegrationService = new DataIntegrationService()

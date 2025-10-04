@@ -1,6 +1,7 @@
 "use client"
 
-import React from "react"
+import type React from "react"
+import { useEffect, useState } from "react"
 import { AppShell, Section } from "../components/app-shell"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
@@ -12,15 +13,14 @@ import { Textarea } from "../components/ui/textarea"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
+  DialogTrigger,
   DialogBody,
   DialogFooter,
-  DialogTrigger,
 } from "../components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
-import { useRBAC } from "../contexts/rbac"
 import {
   Plus,
   Search,
@@ -31,7 +31,6 @@ import {
   MapPin,
   Clock,
   User,
-  Shield,
   Award,
   AlertTriangle,
   Users,
@@ -40,8 +39,11 @@ import {
   Filter,
   Download,
   Upload,
-  Sparkles,
   TrendingUp,
+  Calendar,
+  DollarSign,
+  Eye,
+  CheckCircle,
 } from "lucide-react"
 
 interface StaffMember {
@@ -50,14 +52,13 @@ interface StaffMember {
   lastName: string
   email: string
   phone: string
-  role: "director" | "teacher" | "assistant" | "substitute" | "admin"
-  status: "active" | "inactive" | "on-leave"
+  role: "teacher" | "assistant" | "director" | "staff"
+  status: "active" | "inactive" | "on_leave"
   hireDate: string
   address: string
   emergencyContact: {
     name: string
     phone: string
-    relationship: string
   }
   certifications: string[]
   hourlyRate: number
@@ -66,683 +67,82 @@ interface StaffMember {
   avatar?: string
 }
 
-const INITIAL_STAFF: StaffMember[] = [
-  {
-    id: "1",
-    firstName: "Sarah",
-    lastName: "Johnson",
-    email: "sarah.johnson@childcare.com",
-    phone: "(555) 123-4567",
-    role: "director",
-    status: "active",
-    hireDate: "2020-01-15",
-    address: "123 Main St, City, State 12345",
-    emergencyContact: {
-      name: "Mike Johnson",
-      phone: "(555) 987-6543",
-      relationship: "Spouse",
-    },
-    certifications: ["CPR", "First Aid", "Early Childhood Education"],
-    hourlyRate: 28.5,
-    weeklyHours: 40,
-    notes: "Excellent leadership skills, great with parents",
-    avatar: "/placeholder.svg?height=40&width=40&text=SJ",
-  },
-  {
-    id: "2",
-    firstName: "Emily",
-    lastName: "Davis",
-    email: "emily.davis@childcare.com",
-    phone: "(555) 234-5678",
-    role: "teacher",
-    status: "active",
-    hireDate: "2021-08-20",
-    address: "456 Oak Ave, City, State 12345",
-    emergencyContact: {
-      name: "Robert Davis",
-      phone: "(555) 876-5432",
-      relationship: "Father",
-    },
-    certifications: ["CPR", "First Aid", "Montessori Training"],
-    hourlyRate: 22.0,
-    weeklyHours: 35,
-    notes: "Specializes in toddler care, very patient",
-    avatar: "/placeholder.svg?height=40&width=40&text=ED",
-  },
-  {
-    id: "3",
-    firstName: "Michael",
-    lastName: "Brown",
-    email: "michael.brown@childcare.com",
-    phone: "(555) 345-6789",
-    role: "assistant",
-    status: "on-leave",
-    hireDate: "2022-03-10",
-    address: "789 Pine St, City, State 12345",
-    emergencyContact: {
-      name: "Lisa Brown",
-      phone: "(555) 765-4321",
-      relationship: "Wife",
-    },
-    certifications: ["CPR", "First Aid"],
-    hourlyRate: 18.0,
-    weeklyHours: 30,
-    notes: "On paternity leave until next month",
-    avatar: "/placeholder.svg?height=40&width=40&text=MB",
-  },
-  {
-    id: "4",
-    firstName: "Jessica",
-    lastName: "Wilson",
-    email: "jessica.wilson@childcare.com",
-    phone: "(555) 456-7890",
-    role: "substitute",
-    status: "active",
-    hireDate: "2023-01-05",
-    address: "321 Elm St, City, State 12345",
-    emergencyContact: {
-      name: "Tom Wilson",
-      phone: "(555) 654-3210",
-      relationship: "Brother",
-    },
-    certifications: ["CPR", "First Aid"],
-    hourlyRate: 16.5,
-    weeklyHours: 20,
-    notes: "Available for weekend and evening shifts",
-    avatar: "/placeholder.svg?height=40&width=40&text=JW",
-  },
-]
+const API_URL = "http://localhost:8080/staff"
 
 const ROLE_COLORS = {
-  director: "bg-purple-100 text-purple-800",
-  teacher: "bg-blue-100 text-blue-800",
-  assistant: "bg-green-100 text-green-800",
-  substitute: "bg-yellow-100 text-yellow-800",
-  admin: "bg-red-100 text-red-800",
+  director: "bg-gradient-to-r from-purple-500 to-pink-500 text-white",
+  teacher: "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
+  assistant: "bg-gradient-to-r from-green-500 to-emerald-500 text-white",
+  staff: "bg-gradient-to-r from-gray-500 to-slate-500 text-white",
 }
 
 const STATUS_COLORS = {
-  active: "bg-green-100 text-green-800",
-  inactive: "bg-gray-100 text-gray-800",
-  "on-leave": "bg-orange-100 text-orange-800",
-}
-
-function AddStaffDialog() {
-  const [open, setOpen] = React.useState(false)
-  const [formData, setFormData] = React.useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    role: "",
-    address: "",
-    emergencyContactName: "",
-    emergencyContactPhone: "",
-    emergencyContactRelationship: "",
-    hourlyRate: "",
-    weeklyHours: "",
-    notes: "",
-  })
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log("Adding staff member:", formData)
-    setOpen(false)
-    setFormData({
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
-      role: "",
-      address: "",
-      emergencyContactName: "",
-      emergencyContactPhone: "",
-      emergencyContactRelationship: "",
-      hourlyRate: "",
-      weeklyHours: "",
-      notes: "",
-    })
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add Staff Member
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add New Staff Member</DialogTitle>
-          <DialogDescription>Enter the details for the new staff member.</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <DialogBody className="space-y-6">
-            {/* Personal Information */}
-            <div className="space-y-4">
-              <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Personal Information</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input
-                    id="firstName"
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name *</Label>
-                  <Input
-                    id="lastName"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone *</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* Employment Information */}
-            <div className="space-y-4">
-              <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Employment Information</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role *</Label>
-                  <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="director">Director</SelectItem>
-                      <SelectItem value="teacher">Teacher</SelectItem>
-                      <SelectItem value="assistant">Assistant</SelectItem>
-                      <SelectItem value="substitute">Substitute</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="hourlyRate">Hourly Rate ($)</Label>
-                  <Input
-                    id="hourlyRate"
-                    type="number"
-                    step="0.01"
-                    value={formData.hourlyRate}
-                    onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="weeklyHours">Weekly Hours</Label>
-                <Input
-                  id="weeklyHours"
-                  type="number"
-                  value={formData.weeklyHours}
-                  onChange={(e) => setFormData({ ...formData, weeklyHours: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* Emergency Contact */}
-            <div className="space-y-4">
-              <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Emergency Contact</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="emergencyContactName">Contact Name</Label>
-                  <Input
-                    id="emergencyContactName"
-                    value={formData.emergencyContactName}
-                    onChange={(e) => setFormData({ ...formData, emergencyContactName: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="emergencyContactPhone">Contact Phone</Label>
-                  <Input
-                    id="emergencyContactPhone"
-                    value={formData.emergencyContactPhone}
-                    onChange={(e) => setFormData({ ...formData, emergencyContactPhone: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="emergencyContactRelationship">Relationship</Label>
-                <Input
-                  id="emergencyContactRelationship"
-                  value={formData.emergencyContactRelationship}
-                  onChange={(e) => setFormData({ ...formData, emergencyContactRelationship: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* Notes */}
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Additional notes about the staff member..."
-              />
-            </div>
-          </DialogBody>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">Add Staff Member</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function EditStaffDialog({ staff }: { staff: StaffMember }) {
-  const [open, setOpen] = React.useState(false)
-  const [formData, setFormData] = React.useState({
-    firstName: staff.firstName,
-    lastName: staff.lastName,
-    email: staff.email,
-    phone: staff.phone,
-    role: staff.role,
-    status: staff.status,
-    address: staff.address,
-    emergencyContactName: staff.emergencyContact.name,
-    emergencyContactPhone: staff.emergencyContact.phone,
-    emergencyContactRelationship: staff.emergencyContact.relationship,
-    hourlyRate: staff.hourlyRate.toString(),
-    weeklyHours: staff.weeklyHours.toString(),
-    notes: staff.notes,
-  })
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log("Updating staff member:", formData)
-    setOpen(false)
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <Edit className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Edit Staff Member</DialogTitle>
-          <DialogDescription>
-            Update the details for {staff.firstName} {staff.lastName}.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <DialogBody className="space-y-6">
-            {/* Personal Information */}
-            <div className="space-y-4">
-              <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Personal Information</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-firstName">First Name *</Label>
-                  <Input
-                    id="edit-firstName"
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-lastName">Last Name *</Label>
-                  <Input
-                    id="edit-lastName"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-email">Email *</Label>
-                  <Input
-                    id="edit-email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-phone">Phone *</Label>
-                  <Input
-                    id="edit-phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-address">Address</Label>
-                <Input
-                  id="edit-address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* Employment Information */}
-            <div className="space-y-4">
-              <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Employment Information</h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-role">Role *</Label>
-                  <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="director">Director</SelectItem>
-                      <SelectItem value="teacher">Teacher</SelectItem>
-                      <SelectItem value="assistant">Assistant</SelectItem>
-                      <SelectItem value="substitute">Substitute</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-status">Status *</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) => setFormData({ ...formData, status: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="on-leave">On Leave</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-hourlyRate">Hourly Rate ($)</Label>
-                  <Input
-                    id="edit-hourlyRate"
-                    type="number"
-                    step="0.01"
-                    value={formData.hourlyRate}
-                    onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-weeklyHours">Weekly Hours</Label>
-                <Input
-                  id="edit-weeklyHours"
-                  type="number"
-                  value={formData.weeklyHours}
-                  onChange={(e) => setFormData({ ...formData, weeklyHours: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* Emergency Contact */}
-            <div className="space-y-4">
-              <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Emergency Contact</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-emergencyContactName">Contact Name</Label>
-                  <Input
-                    id="edit-emergencyContactName"
-                    value={formData.emergencyContactName}
-                    onChange={(e) => setFormData({ ...formData, emergencyContactName: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-emergencyContactPhone">Contact Phone</Label>
-                  <Input
-                    id="edit-emergencyContactPhone"
-                    value={formData.emergencyContactPhone}
-                    onChange={(e) => setFormData({ ...formData, emergencyContactPhone: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-emergencyContactRelationship">Relationship</Label>
-                <Input
-                  id="edit-emergencyContactRelationship"
-                  value={formData.emergencyContactRelationship}
-                  onChange={(e) => setFormData({ ...formData, emergencyContactRelationship: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* Notes */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-notes">Notes</Label>
-              <Textarea
-                id="edit-notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Additional notes about the staff member..."
-              />
-            </div>
-          </DialogBody>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">Update Staff Member</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function DeleteStaffDialog({ staff }: { staff: StaffMember }) {
-  const [open, setOpen] = React.useState(false)
-
-  const handleDelete = () => {
-    console.log("Deleting staff member:", staff.id)
-    setOpen(false)
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-700 hover:bg-red-50">
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-red-600">
-            <AlertTriangle className="h-5 w-5" />
-            Delete Staff Member
-          </DialogTitle>
-          <DialogDescription>
-            Are you sure you want to delete {staff.firstName} {staff.lastName}? This action cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogBody>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <h4 className="font-medium text-red-800 mb-2">This will permanently:</h4>
-            <ul className="text-sm text-red-700 space-y-1">
-              <li>• Remove all staff records and employment history</li>
-              <li>• Delete associated scheduling and time tracking data</li>
-              <li>• Remove access to the childcare management system</li>
-              <li>• Archive any messages or communications</li>
-            </ul>
-          </div>
-        </DialogBody>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
-          <Button variant="default" onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
-            Delete Staff Member
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function StaffDetailsDialog({ staff }: { staff: StaffMember }) {
-  const [open, setOpen] = React.useState(false)
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <User className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <img
-              src={staff.avatar || "/placeholder.svg?height=40&width=40&text=" + staff.firstName[0] + staff.lastName[0]}
-              alt={`${staff.firstName} ${staff.lastName}`}
-              className="h-10 w-10 rounded-full"
-            />
-            {staff.firstName} {staff.lastName}
-          </DialogTitle>
-          <DialogDescription>Complete staff member information and employment details.</DialogDescription>
-        </DialogHeader>
-        <DialogBody className="space-y-6">
-          {/* Status and Role */}
-          <div className="flex items-center gap-4">
-            <Badge className={ROLE_COLORS[staff.role]}>{staff.role}</Badge>
-            <Badge className={STATUS_COLORS[staff.status]}>{staff.status}</Badge>
-            <div className="text-sm text-gray-500">Hired: {new Date(staff.hireDate).toLocaleDateString()}</div>
-          </div>
-
-          {/* Contact Information */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Contact Information</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-gray-400" />
-                <span className="text-sm">{staff.email}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-gray-400" />
-                <span className="text-sm">{staff.phone}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-gray-400" />
-              <span className="text-sm">{staff.address}</span>
-            </div>
-          </div>
-
-          {/* Employment Details */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Employment Details</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-gray-400" />
-                <span className="text-sm">{staff.weeklyHours} hours/week</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Award className="h-4 w-4 text-gray-400" />
-                <span className="text-sm">${staff.hourlyRate}/hour</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Emergency Contact */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Emergency Contact</h3>
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="font-medium">{staff.emergencyContact.name}</div>
-              <div className="text-sm text-gray-600">{staff.emergencyContact.relationship}</div>
-              <div className="text-sm text-gray-600">{staff.emergencyContact.phone}</div>
-            </div>
-          </div>
-
-          {/* Certifications */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Certifications</h3>
-            <div className="flex flex-wrap gap-2">
-              {staff.certifications.map((cert, index) => (
-                <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800">
-                  {cert}
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          {/* Notes */}
-          {staff.notes && (
-            <div className="space-y-3">
-              <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Notes</h3>
-              <div className="bg-gray-50 rounded-lg p-4 text-sm">{staff.notes}</div>
-            </div>
-          )}
-        </DialogBody>
-        <DialogFooter>
-          <Button onClick={() => setOpen(false)}>Close</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
+  active: "bg-gradient-to-r from-green-500 to-emerald-500 text-white",
+  inactive: "bg-gradient-to-r from-red-500 to-rose-500 text-white",
+  on_leave: "bg-gradient-to-r from-orange-500 to-amber-500 text-white",
 }
 
 export default function Staff() {
-  const { can } = useRBAC()
-  const [staff, setStaff] = React.useState<StaffMember[]>(INITIAL_STAFF)
-  const [searchQuery, setSearchQuery] = React.useState("")
-  const [roleFilter, setRoleFilter] = React.useState<string>("all")
-  const [statusFilter, setStatusFilter] = React.useState<string>("all")
+  const [staff, setStaff] = useState<StaffMember[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [roleFilter, setRoleFilter] = useState<string>("all")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
 
-  if (!can("manage:settings")) {
-    return (
-      <AppShell title="Staff Management">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
-            <p className="text-gray-500">You don't have permission to manage staff members.</p>
-          </div>
-        </div>
-      </AppShell>
-    )
+  // Fetch staff from API
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const res = await fetch(API_URL)
+        const data = await res.json()
+        setStaff(data)
+      } catch (err) {
+        console.error("Error fetching staff:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchStaff()
+  }, [])
+
+  // Add staff
+  const handleAddStaff = async (newStaff: Omit<StaffMember, "id">) => {
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newStaff),
+      })
+      const created = await res.json()
+      setStaff((prev) => [...prev, created])
+    } catch (err) {
+      console.error("Error adding staff:", err)
+    }
+  }
+
+  // Update staff
+  const handleUpdateStaff = async (updated: StaffMember) => {
+    try {
+      const res = await fetch(`${API_URL}/${updated.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated),
+      })
+      const saved = await res.json()
+      setStaff((prev) => prev.map((s) => (s.id === saved.id ? saved : s)))
+    } catch (err) {
+      console.error("Error updating staff:", err)
+    }
+  }
+
+  // Delete staff
+  const handleDeleteStaff = async (id: string) => {
+    try {
+      await fetch(`${API_URL}/${id}`, { method: "DELETE" })
+      setStaff((prev) => prev.filter((s) => s.id !== id))
+    } catch (err) {
+      console.error("Error deleting staff:", err)
+    }
   }
 
   const filteredStaff = staff.filter((member) => {
@@ -763,103 +163,124 @@ export default function Staff() {
   return (
     <AppShell title="Staff Management">
       <div className="space-y-6">
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 p-8 text-white shadow-2xl">
-          <div className="absolute inset-0 bg-[url('/abstract-geometric-flow.png')] opacity-10"></div>
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-                <Users className="h-8 w-8" />
+        {/* Hero Section */}
+        <div className="relative overflow-hidden rounded-3xl border shadow-2xl">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 opacity-95" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+
+          {/* Floating decorative elements */}
+          <div className="absolute top-6 right-8 w-32 h-32 bg-white/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-8 left-8 w-24 h-24 bg-white/5 rounded-full blur-2xl animate-bounce" />
+          <div className="absolute top-1/3 right-1/4 w-20 h-20 bg-white/10 rounded-full blur-xl animate-pulse delay-1000" />
+
+          <div className="relative p-8 md:p-12 text-white">
+            <div className="flex items-start gap-4">
+              <div className="inline-flex h-20 w-20 items-center justify-center bg-white/20 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 animate-bounce">
+                <Users className="h-10 w-10 text-white drop-shadow-lg" />
               </div>
-              <div>
-                <h1 className="text-3xl font-bold">Staff Management</h1>
-                <p className="text-blue-100 text-sm">Manage your amazing team at Salam Nest</p>
+              <div className="flex-1">
+                <h1 className="text-4xl md:text-5xl font-bold leading-tight bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent drop-shadow-lg">
+                  Staff Management
+                </h1>
+                <p className="mt-3 text-xl text-blue-50/90 font-medium">
+                  Comprehensive team directory with certifications, scheduling, and payroll tracking
+                </p>
+                <div className="flex items-center gap-6 mt-4 text-blue-100/80">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="h-5 w-5" />
+                    <span className="text-sm font-medium">Team Directory</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Award className="h-5 w-5" />
+                    <span className="text-sm font-medium">Certifications</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    <span className="text-sm font-medium">Payroll Tracking</span>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2 mt-4">
-              <Sparkles className="h-5 w-5 text-yellow-300" />
-              <p className="text-sm text-blue-50">
-                {activeStaff} active team members working together to create a nurturing environment
-              </p>
             </div>
           </div>
         </div>
 
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600 opacity-90"></div>
-            <div className="relative p-6 text-white">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-                  <Users className="h-6 w-6" />
+          <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-blue-50 to-indigo-100">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl" />
+            <div className="relative p-6">
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl shadow-lg">
+                  <Users className="h-6 w-6 text-white" />
                 </div>
-                <TrendingUp className="h-5 w-5 text-blue-100" />
+                <TrendingUp className="h-5 w-5 text-blue-600" />
               </div>
-              <div className="text-3xl font-bold mb-1">{staff.length}</div>
-              <div className="text-sm text-blue-100 font-medium">Total Staff</div>
+              <div className="text-3xl font-bold text-gray-900">{staff.length}</div>
+              <div className="text-sm font-medium text-gray-600 mt-1">Total Staff Members</div>
             </div>
           </Card>
 
-          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-600 opacity-90"></div>
-            <div className="relative p-6 text-white">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-                  <UserCheck className="h-6 w-6" />
+          <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-green-50 to-emerald-100">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-green-400/20 rounded-full blur-2xl" />
+            <div className="relative p-6">
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl shadow-lg">
+                  <UserCheck className="h-6 w-6 text-white" />
                 </div>
-                <div className="px-2 py-1 bg-white/20 rounded-full text-xs font-semibold">
-                  {staff.length > 0 ? Math.round((activeStaff / staff.length) * 100) : 0}%
-                </div>
+                <CheckCircle className="h-5 w-5 text-green-600" />
               </div>
-              <div className="text-3xl font-bold mb-1">{activeStaff}</div>
-              <div className="text-sm text-green-100 font-medium">Active Staff</div>
+              <div className="text-3xl font-bold text-gray-900">{activeStaff}</div>
+              <div className="text-sm font-medium text-gray-600 mt-1">Active Staff</div>
             </div>
           </Card>
 
-          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-amber-600 opacity-90"></div>
-            <div className="relative p-6 text-white">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-                  <UserX className="h-6 w-6" />
+          <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-orange-50 to-amber-100">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-400/20 rounded-full blur-2xl" />
+            <div className="relative p-6">
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-3 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl shadow-lg">
+                  <UserX className="h-6 w-6 text-white" />
                 </div>
-                <Clock className="h-5 w-5 text-orange-100" />
+                <Clock className="h-5 w-5 text-orange-600" />
               </div>
-              <div className="text-3xl font-bold mb-1">{staff.filter((s) => s.status === "on-leave").length}</div>
-              <div className="text-sm text-orange-100 font-medium">On Leave</div>
+              <div className="text-3xl font-bold text-gray-900">
+                {staff.filter((s) => s.status === "on_leave").length}
+              </div>
+              <div className="text-sm font-medium text-gray-600 mt-1">On Leave</div>
             </div>
           </Card>
 
-          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-600 opacity-90"></div>
-            <div className="relative p-6 text-white">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-                  <Award className="h-6 w-6" />
+          <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-purple-50 to-pink-100">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-400/20 rounded-full blur-2xl" />
+            <div className="relative p-6">
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl shadow-lg">
+                  <DollarSign className="h-6 w-6 text-white" />
                 </div>
-                <Sparkles className="h-5 w-5 text-purple-100" />
+                <Award className="h-5 w-5 text-purple-600" />
               </div>
-              <div className="text-3xl font-bold mb-1">${totalPayroll.toFixed(0)}</div>
-              <div className="text-sm text-purple-100 font-medium">Weekly Payroll</div>
+              <div className="text-3xl font-bold text-gray-900">${totalPayroll.toFixed(0)}</div>
+              <div className="text-sm font-medium text-gray-600 mt-1">Weekly Payroll</div>
             </div>
           </Card>
         </div>
 
-        {/* Staff Management */}
-        <Section title="Staff Directory" description="Manage your childcare center staff members.">
-          <div className="space-y-4">
+        {/* Staff Directory Section */}
+        <Section title="Staff Directory" description="Manage your childcare center team members and track credentials.">
+          <div className="space-y-6">
+            {/* Search and Filters */}
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Search staff by name or email..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                  className="h-12 border-2 border-blue-200 focus:border-blue-400 bg-white shadow-sm"
                 />
               </div>
               <div className="flex gap-2">
                 <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-40 border-gray-300">
+                  <SelectTrigger className="w-40 h-12 border-2 border-blue-200 focus:border-blue-400 bg-white shadow-sm">
                     <Filter className="h-4 w-4 mr-2" />
                     <SelectValue />
                   </SelectTrigger>
@@ -868,70 +289,56 @@ export default function Staff() {
                     <SelectItem value="director">Director</SelectItem>
                     <SelectItem value="teacher">Teacher</SelectItem>
                     <SelectItem value="assistant">Assistant</SelectItem>
-                    <SelectItem value="substitute">Substitute</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="staff">Staff</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-40 border-gray-300">
+                  <SelectTrigger className="w-40 h-12 border-2 border-blue-200 focus:border-blue-400 bg-white shadow-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="on-leave">On Leave</SelectItem>
+                    <SelectItem value="on_leave">On Leave</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
+            {/* Action Buttons */}
             <div className="flex justify-between items-center">
-              <div className="flex gap-2">
-                <AddStaffDialog />
-                <Button variant="outline" className="gap-2 border-gray-300 hover:bg-gray-50 bg-transparent">
-                  <Upload className="h-4 w-4" />
-                  Import CSV
-                </Button>
+              <div className="flex gap-3">
+                <AddStaffDialog onAdd={handleAddStaff} />
               </div>
-              <Button variant="outline" className="gap-2 border-gray-300 hover:bg-gray-50 bg-transparent">
-                <Download className="h-4 w-4" />
-                Export Staff List
-              </Button>
             </div>
 
-            <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+            {/* Staff Table */}
+            <div className="rounded-2xl border-2 border-blue-100 bg-gradient-to-br from-white to-blue-50/30 overflow-hidden shadow-xl">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
-                    <TableHead className="font-semibold text-gray-700">Staff Member</TableHead>
-                    <TableHead className="font-semibold text-gray-700">Role</TableHead>
-                    <TableHead className="font-semibold text-gray-700">Status</TableHead>
-                    <TableHead className="font-semibold text-gray-700">Contact</TableHead>
-                    <TableHead className="font-semibold text-gray-700">Employment</TableHead>
-                    <TableHead className="font-semibold text-gray-700">Actions</TableHead>
+                  <TableRow className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 border-0 h-14">
+                    <TableHead className="text-white font-semibold text-base">Staff Member</TableHead>
+                    <TableHead className="text-white font-semibold text-base">Role</TableHead>
+                    <TableHead className="text-white font-semibold text-base">Status</TableHead>
+                    <TableHead className="text-white font-semibold text-base">Contact</TableHead>
+                    <TableHead className="text-white font-semibold text-base">Employment</TableHead>
+                    <TableHead className="text-white font-semibold text-base text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredStaff.map((member) => (
-                    <TableRow key={member.id} className="hover:bg-blue-50/50 transition-colors duration-150">
+                  {filteredStaff.map((member, index) => (
+                    <TableRow
+                      key={member.id}
+                      className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 ${
+                        index % 2 === 0 ? "bg-white" : "bg-blue-25"
+                      }`}
+                    >
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="relative">
-                            <img
-                              src={
-                                member.avatar ||
-                                "/placeholder.svg?height=40&width=40&text=" +
-                                  member.firstName[0] +
-                                  member.lastName[0] ||
-                                "/placeholder.svg"
-                              }
-                              alt={`${member.firstName} ${member.lastName}`}
-                              className="h-10 w-10 rounded-full ring-2 ring-gray-200"
-                            />
-                            {member.status === "active" && (
-                              <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></div>
-                            )}
+                          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center font-bold text-white shadow-lg text-lg">
+                            {member.firstName[0]}
+                            {member.lastName[0]}
                           </div>
                           <div>
                             <div className="font-semibold text-gray-900">
@@ -942,34 +349,38 @@ export default function Staff() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={ROLE_COLORS[member.role] + " font-medium"}>{member.role}</Badge>
+                        <Badge className={`${ROLE_COLORS[member.role]} shadow-md capitalize px-3 py-1`}>
+                          {member.role}
+                        </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge className={STATUS_COLORS[member.status] + " font-medium"}>{member.status}</Badge>
+                        <Badge className={`${STATUS_COLORS[member.status]} shadow-md capitalize px-3 py-1`}>
+                          {member.status.replace("_", " ")}
+                        </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm space-y-1">
-                          <div className="flex items-center gap-1.5 text-gray-700">
-                            <Phone className="h-3.5 w-3.5 text-gray-400" />
-                            {member.phone}
+                        <div className="space-y-1 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-3 w-3 text-gray-400" />
+                            <span className="text-gray-700">{member.phone}</span>
                           </div>
-                          <div className="flex items-center gap-1.5 text-gray-500">
-                            <Mail className="h-3.5 w-3.5 text-gray-400" />
-                            {member.email}
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-3 w-3 text-gray-400" />
+                            <span className="text-gray-500 truncate max-w-[200px]">{member.email}</span>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm">
+                        <div className="space-y-1 text-sm">
                           <div className="font-semibold text-gray-900">${member.hourlyRate}/hr</div>
                           <div className="text-gray-500">{member.weeklyHours}h/week</div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center justify-center gap-2">
                           <StaffDetailsDialog staff={member} />
-                          <EditStaffDialog staff={member} />
-                          <DeleteStaffDialog staff={member} />
+                          <EditStaffDialog staff={member} onUpdate={handleUpdateStaff} />
+                          <DeleteStaffDialog staff={member} onDelete={handleDeleteStaff} />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -979,22 +390,690 @@ export default function Staff() {
             </div>
 
             {filteredStaff.length === 0 && (
-              <div className="text-center py-12 bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl border-2 border-dashed border-gray-300">
-                <div className="inline-flex p-4 bg-white rounded-full shadow-sm mb-4">
-                  <Users className="h-12 w-12 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No staff members found</h3>
-                <p className="text-gray-500 mb-6 max-w-md mx-auto">
+              <div className="text-center py-12">
+                <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No staff members found</h3>
+                <p className="text-gray-500 mb-6">
                   {searchQuery || roleFilter !== "all" || statusFilter !== "all"
-                    ? "Try adjusting your search or filters to find what you're looking for."
-                    : "Get started by adding your first staff member to build your amazing team."}
+                    ? "Try adjusting your search or filters."
+                    : "Get started by adding your first staff member."}
                 </p>
-                {!searchQuery && roleFilter === "all" && statusFilter === "all" && <AddStaffDialog />}
+                {!searchQuery && roleFilter === "all" && statusFilter === "all" && (
+                  <AddStaffDialog onAdd={handleAddStaff} />
+                )}
               </div>
             )}
           </div>
         </Section>
       </div>
     </AppShell>
+  )
+}
+
+/* ---------------------- Dialogs ---------------------- */
+
+// Add Staff Dialog
+function AddStaffDialog({ onAdd }: { onAdd: (staff: any) => void }) {
+  const [open, setOpen] = useState(false)
+  const [formData, setFormData] = useState<any>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    role: "staff",
+    status: "active",
+    hireDate: new Date().toISOString().split("T")[0],
+    address: "",
+    emergencyContact: { name: "", phone: "" },
+    certifications: [],
+    hourlyRate: 0,
+    weeklyHours: 0,
+    notes: "",
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onAdd(formData)
+    setOpen(false)
+    setFormData({
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      role: "staff",
+      status: "active",
+      hireDate: new Date().toISOString().split("T")[0],
+      address: "",
+      emergencyContact: { name: "", phone: "" },
+      certifications: [],
+      hourlyRate: 0,
+      weeklyHours: 0,
+      notes: "",
+    })
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white border-0 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+          <Plus className="h-5 w-5 mr-2" />
+          Add Staff Member
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-3xl border-0 shadow-2xl bg-gradient-to-br from-white to-blue-50/30 max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-6">
+          <DialogTitle className="flex items-center gap-3 text-2xl">
+            <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+              <User className="h-6 w-6 text-white" />
+            </div>
+            Add New Staff Member
+          </DialogTitle>
+          <DialogDescription className="text-base text-gray-600 mt-2">
+            Enter the complete details for the new team member including contact, employment, and emergency information.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit}>
+          <DialogBody className="space-y-6">
+            {/* Personal Information */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg text-gray-800 flex items-center gap-2">
+                <User className="h-5 w-5 text-indigo-600" />
+                Personal Information
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">First Name *</Label>
+                  <Input
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    required
+                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Last Name *</Label>
+                  <Input
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    required
+                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Email *</Label>
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
+                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Phone *</Label>
+                  <Input
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    required
+                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700">Address</Label>
+                <Input
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Employment Information */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg text-gray-800 flex items-center gap-2">
+                <Award className="h-5 w-5 text-purple-600" />
+                Employment Information
+              </h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Role *</Label>
+                  <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+                    <SelectTrigger className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="teacher">Teacher</SelectItem>
+                      <SelectItem value="assistant">Assistant</SelectItem>
+                      <SelectItem value="director">Director</SelectItem>
+                      <SelectItem value="staff">Staff</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Hourly Rate ($)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.hourlyRate}
+                    onChange={(e) => setFormData({ ...formData, hourlyRate: Number(e.target.value) })}
+                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Weekly Hours</Label>
+                  <Input
+                    type="number"
+                    value={formData.weeklyHours}
+                    onChange={(e) => setFormData({ ...formData, weeklyHours: Number(e.target.value) })}
+                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700">Hire Date</Label>
+                <Input
+                  type="date"
+                  value={formData.hireDate}
+                  onChange={(e) => setFormData({ ...formData, hireDate: e.target.value })}
+                  className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Emergency Contact */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg text-gray-800 flex items-center gap-2">
+                <Phone className="h-5 w-5 text-pink-600" />
+                Emergency Contact
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Contact Name</Label>
+                  <Input
+                    value={formData.emergencyContact.name}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        emergencyContact: { ...formData.emergencyContact, name: e.target.value },
+                      })
+                    }
+                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Contact Phone</Label>
+                  <Input
+                    value={formData.emergencyContact.phone}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        emergencyContact: { ...formData.emergencyContact, phone: e.target.value },
+                      })
+                    }
+                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-gray-700">Additional Notes</Label>
+              <Textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Any additional information about the staff member..."
+                className="min-h-[100px] border-2 border-blue-200 focus:border-blue-400 bg-white resize-none"
+              />
+            </div>
+          </DialogBody>
+
+          <DialogFooter className="pt-6 gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              className="border-2 border-gray-300 hover:bg-gray-50 px-6"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white border-0 shadow-xl px-8"
+            >
+              Add Staff Member
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// Edit Staff Dialog
+function EditStaffDialog({ staff, onUpdate }: { staff: StaffMember; onUpdate: (s: StaffMember) => void }) {
+  const [open, setOpen] = useState(false)
+  const [formData, setFormData] = useState<StaffMember>(staff)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onUpdate(formData)
+    setOpen(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hover:bg-blue-100 text-blue-600 hover:text-blue-700 transition-colors"
+        >
+          <Edit className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-3xl border-0 shadow-2xl bg-gradient-to-br from-white to-blue-50/30 max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-6">
+          <DialogTitle className="flex items-center gap-3 text-2xl">
+            <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+              <Edit className="h-6 w-6 text-white" />
+            </div>
+            Edit Staff Member
+          </DialogTitle>
+          <DialogDescription className="text-base text-gray-600 mt-2">
+            Update the details for {staff.firstName} {staff.lastName}.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit}>
+          <DialogBody className="space-y-6">
+            {/* Personal Information */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg text-gray-800 flex items-center gap-2">
+                <User className="h-5 w-5 text-indigo-600" />
+                Personal Information
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">First Name *</Label>
+                  <Input
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    required
+                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Last Name *</Label>
+                  <Input
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    required
+                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Email *</Label>
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
+                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Phone *</Label>
+                  <Input
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    required
+                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700">Address</Label>
+                <Input
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Employment Information */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg text-gray-800 flex items-center gap-2">
+                <Award className="h-5 w-5 text-purple-600" />
+                Employment Information
+              </h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Role *</Label>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value) => setFormData({ ...formData, role: value as any })}
+                  >
+                    <SelectTrigger className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="teacher">Teacher</SelectItem>
+                      <SelectItem value="assistant">Assistant</SelectItem>
+                      <SelectItem value="director">Director</SelectItem>
+                      <SelectItem value="staff">Staff</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Status *</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) => setFormData({ ...formData, status: value as any })}
+                  >
+                    <SelectTrigger className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="on_leave">On Leave</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Hourly Rate ($)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.hourlyRate}
+                    onChange={(e) => setFormData({ ...formData, hourlyRate: Number(e.target.value) })}
+                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700">Weekly Hours</Label>
+                <Input
+                  type="number"
+                  value={formData.weeklyHours}
+                  onChange={(e) => setFormData({ ...formData, weeklyHours: Number(e.target.value) })}
+                  className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Emergency Contact */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg text-gray-800 flex items-center gap-2">
+                <Phone className="h-5 w-5 text-pink-600" />
+                Emergency Contact
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Contact Name</Label>
+                  <Input
+                    value={formData.emergencyContact.name}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        emergencyContact: { ...formData.emergencyContact, name: e.target.value },
+                      })
+                    }
+                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Contact Phone</Label>
+                  <Input
+                    value={formData.emergencyContact.phone}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        emergencyContact: { ...formData.emergencyContact, phone: e.target.value },
+                      })
+                    }
+                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-gray-700">Additional Notes</Label>
+              <Textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Any additional information about the staff member..."
+                className="min-h-[100px] border-2 border-blue-200 focus:border-blue-400 bg-white resize-none"
+              />
+            </div>
+          </DialogBody>
+
+          <DialogFooter className="pt-6 gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              className="border-2 border-gray-300 hover:bg-gray-50 px-6"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 hover:from-blue-600 hover:via-indigo-600 hover:to-purple-600 text-white border-0 shadow-xl px-8"
+            >
+              Update Staff Member
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// Delete Staff Dialog
+function DeleteStaffDialog({ staff, onDelete }: { staff: StaffMember; onDelete: (id: string) => void }) {
+  const [open, setOpen] = useState(false)
+
+  const handleDelete = () => {
+    onDelete(staff.id)
+    setOpen(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-red-600 hover:text-red-700 hover:bg-red-100 transition-colors"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="border-0 shadow-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-red-600 text-xl">
+            <AlertTriangle className="h-6 w-6" />
+            Delete Staff Member
+          </DialogTitle>
+          <DialogDescription className="text-base text-gray-600 mt-2">
+            Are you sure you want to delete {staff.firstName} {staff.lastName}? This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
+            <h4 className="font-semibold text-red-800 mb-2">This will permanently:</h4>
+            <ul className="text-sm text-red-700 space-y-1">
+              <li>• Remove all staff records and employment history</li>
+              <li>• Delete associated scheduling and time tracking data</li>
+              <li>• Remove access to the childcare management system</li>
+              <li>• Archive any messages or communications</li>
+            </ul>
+          </div>
+        </DialogBody>
+        <DialogFooter className="gap-3">
+          <Button variant="outline" onClick={() => setOpen(false)} className="border-2 border-gray-300 px-6">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDelete}
+            className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white border-0 shadow-lg px-6"
+          >
+            Delete Staff Member
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// Staff Details Dialog
+function StaffDetailsDialog({ staff }: { staff: StaffMember }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hover:bg-indigo-100 text-indigo-600 hover:text-indigo-700 transition-colors"
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl border-0 shadow-2xl">
+        <DialogHeader className="pb-4">
+          <DialogTitle className="flex items-center gap-3 text-2xl">
+            <div className="h-14 w-14 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center font-bold text-white shadow-lg text-xl">
+              {staff.firstName[0]}
+              {staff.lastName[0]}
+            </div>
+            {staff.firstName} {staff.lastName}
+          </DialogTitle>
+          <DialogDescription className="text-base text-gray-600">
+            Complete staff member information and employment details.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody className="space-y-6">
+          {/* Status and Role */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <Badge className={`${ROLE_COLORS[staff.role]} shadow-md capitalize px-4 py-1.5`}>{staff.role}</Badge>
+            <Badge className={`${STATUS_COLORS[staff.status]} shadow-md capitalize px-4 py-1.5`}>
+              {staff.status.replace("_", " ")}
+            </Badge>
+            <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg">
+              <Calendar className="h-4 w-4" />
+              Hired: {new Date(staff.hireDate).toLocaleDateString()}
+            </div>
+          </div>
+
+          {/* Contact Information */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-base text-gray-800 flex items-center gap-2">
+              <Mail className="h-5 w-5 text-indigo-600" />
+              Contact Information
+            </h3>
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 space-y-2">
+              <div className="flex items-center gap-3">
+                <Mail className="h-4 w-4 text-gray-400" />
+                <span className="text-sm text-gray-700">{staff.email}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Phone className="h-4 w-4 text-gray-400" />
+                <span className="text-sm text-gray-700">{staff.phone}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <MapPin className="h-4 w-4 text-gray-400" />
+                <span className="text-sm text-gray-700">{staff.address}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Employment Details */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-base text-gray-800 flex items-center gap-2">
+              <Award className="h-5 w-5 text-purple-600" />
+              Employment Details
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="h-4 w-4 text-purple-600" />
+                  <span className="text-xs font-medium text-gray-600">Weekly Hours</span>
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{staff.weeklyHours}h</div>
+              </div>
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <DollarSign className="h-4 w-4 text-green-600" />
+                  <span className="text-xs font-medium text-gray-600">Hourly Rate</span>
+                </div>
+                <div className="text-2xl font-bold text-gray-900">${staff.hourlyRate}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Emergency Contact */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-base text-gray-800 flex items-center gap-2">
+              <Phone className="h-5 w-5 text-pink-600" />
+              Emergency Contact
+            </h3>
+            <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl p-4">
+              <div className="font-semibold text-gray-900">{staff.emergencyContact.name}</div>
+              <div className="text-sm text-gray-600 mt-1">{staff.emergencyContact.phone}</div>
+            </div>
+          </div>
+
+          {/* Certifications */}
+          {staff.certifications && staff.certifications.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="font-semibold text-base text-gray-800 flex items-center gap-2">
+                <Award className="h-5 w-5 text-blue-600" />
+                Certifications
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {staff.certifications.map((cert, index) => (
+                  <Badge
+                    key={index}
+                    variant="secondary"
+                    className="bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 shadow-sm px-3 py-1"
+                  >
+                    {cert}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Notes */}
+          {staff.notes && (
+            <div className="space-y-3">
+              <h3 className="font-semibold text-base text-gray-800">Notes</h3>
+              <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-700">{staff.notes}</div>
+            </div>
+          )}
+        </DialogBody>
+        <DialogFooter>
+          <Button
+            onClick={() => setOpen(false)}
+            className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg"
+          >
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
