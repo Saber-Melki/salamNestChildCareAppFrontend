@@ -5,7 +5,7 @@ const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 const GEMINI_MODEL = "google/gemini-2.0-flash-lite-001"
 
 interface QueryIntent {
-  entity: "children" | "attendance" | "billing" | "health" | "media" | "report" | "shift" | "booking" | "event" | "album" | "staff"
+  entity: "children" | "attendance" | "billing" | "health" | "media" | "report" | "shift" | "booking" | "event" | "album" | "staff" | "user"
   type: "count" | "list" | "find" | "analyze" | "summary"
   filters?: Record<string, any>
   timeframe?: string
@@ -58,7 +58,7 @@ Return a JSON object with the following structure:
 
 {
   "type": "count|list|find|analyze|summary",
-  entity: "children" | "attendance" | "billing" | "health" | "media" | "report" | "shift" | "booking" | "event" | "album" | "staff",
+  entity: "children" | "attendance" | "billing" | "health" | "media" | "report" | "shift" | "booking" | "event" | "album" | "staff" | "user",
   "filters": {},
   "aggregation": "sum|avg|max|min|count",
   "timeframe": "today|yesterday|week|month|quarter|year"
@@ -161,6 +161,9 @@ Return only the JSON object.
       entity = "health"
     } else if (lowerQuery.includes("staff") || lowerQuery.includes("employee") || lowerQuery.includes("teacher") || lowerQuery.includes("personnel") || lowerQuery.includes("worker") || lowerQuery.includes("work") || lowerQuery.includes("shift")) {
       entity = "staff"
+    }
+    else if (lowerQuery.includes("user") || lowerQuery.includes("account") || lowerQuery.includes("login") || lowerQuery.includes("profile") || lowerQuery.includes("administrator") || lowerQuery.includes("admin") || lowerQuery.includes("users")) {
+      entity = "user"
     }
 
     

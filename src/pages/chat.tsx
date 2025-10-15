@@ -34,6 +34,8 @@ import {
   Star,
   Flame,
   Check,
+  FileJson,
+  Calendar1,
 } from "lucide-react"
 import { cn } from "../lib/utils"
 import { universalPDFService } from "../services/universal-pdf-service"
@@ -72,7 +74,6 @@ export default function ChatPage() {
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
   const inputRef = React.useRef<HTMLInputElement>(null)
 
-  // Auto-scroll to bottom when new messages arrive
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
@@ -88,14 +89,20 @@ export default function ChatPage() {
       const welcomeMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: `Hello ${user?.name || "there"}! 👋 I'm Sparky, your intelligent AI assistant for ${brandName}, How can I help you manage your center today?`,
+        content: `Hello ${user?.name || "there"}! 👋 I'm Sparky, your intelligent AI assistant for ${brandName}. 
+
+I can help you with comprehensive reports and data exports. When I provide data, you can choose to download it as:
+- **📄 PDF Report** - Beautifully formatted with charts and tables
+- **📊 JSON Data** - Raw data for further analysis or integration
+
+How can I help you manage your center today?`,
         timestamp: new Date(),
         confidence: 1.0,
         suggestions: [
           "Generate a comprehensive daily report",
           "Show me today's attendance summary",
+          "List all children enrolled",
           "What's our revenue for this month?",
-          "List all staff members on duty today",
         ],
       }
       setMessages([welcomeMessage])
@@ -129,7 +136,6 @@ export default function ChatPage() {
       if (lastMessage && lastMessage.role === "assistant") {
         lastMessage.isLoading = false
       }
-
       return newMessages
     })
 
@@ -223,10 +229,33 @@ export default function ChatPage() {
 
   const handleDownloadPDF = (reportData: any) => {
     try {
-      console.log("Generating PDF with report data:", reportData)
+      console.log("🔷 Initiating PDF download")
+      console.log("📊 Report data:", reportData)
+
+      // Validate that we have data
+      if (!reportData) {
+        throw new Error("No report data available")
+      }
+
+      // Extract and validate data
+      let dataToExport = reportData.data
+
+      // Handle various data formats
+      if (!dataToExport) {
+        throw new Error("Report data is missing the 'data' property")
+      }
+
+      // If data is not an array and is an object, check if it's a comprehensive report
+      if (!Array.isArray(dataToExport) && typeof dataToExport === "object") {
+        // For comprehensive reports, wrap the object
+        console.log("Detected comprehensive report format")
+        dataToExport = dataToExport
+      }
+
+      console.log("✅ Data prepared for PDF:", dataToExport)
 
       universalPDFService.downloadReport(
-        reportData.data || [],
+        dataToExport,
         {
           title: `${reportData.entity.charAt(0).toUpperCase() + reportData.entity.slice(1)} Report`,
           subtitle: `Comprehensive ${reportData.entity} data analysis`,
@@ -239,13 +268,70 @@ export default function ChatPage() {
             name: user?.name || "Administration Office",
             role: user?.role || "Center Director",
             email: user?.email || "admin@salamnest.com",
-            phone: "+1 (555) 123-4567",
+            phone: "+966 533 598 491",
           },
         },
       )
+
+      console.log("✅ PDF download initiated successfully")
     } catch (error) {
-      console.error("Error generating PDF:", error)
-      alert("Failed to generate PDF. Please try again.")
+      console.error("❌ Error in handleDownloadPDF:", error)
+
+      // Show user-friendly error message
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
+      alert(
+        `Unable to generate PDF: ${errorMessage}\n\nPlease try:\n• Requesting different data\n• Refreshing the page\n• Contacting support if the issue persists`,
+      )
+    }
+  }
+
+  const handleDownloadJSON = (reportData: any) => {
+    try {
+      console.log("🔷 Initiating JSON download")
+      console.log("📊 Report data:", reportData)
+
+      if (!reportData || !reportData.data) {
+        throw new Error("No data available to export")
+      }
+
+      // Create a comprehensive JSON structure
+      const jsonData = {
+        metadata: {
+          entity: reportData.entity,
+          generatedAt: new Date().toISOString(),
+          generatedBy: user?.name || "System Administrator",
+          brandName: brandName,
+          totalRecords: Array.isArray(reportData.data) ? reportData.data.length : 1,
+          source: reportData.metadata?.source || "api",
+        },
+        data: reportData.data,
+      }
+
+      // Convert to formatted JSON string
+      const jsonString = JSON.stringify(jsonData, null, 2)
+
+      // Create blob and download
+      const blob = new Blob([jsonString], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().split("T")[0]
+      const filename = `${reportData.entity}-report-${timestamp}.json`
+
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      console.log(`✅ JSON file downloaded: ${filename}`)
+    } catch (error) {
+      console.error("❌ Error in handleDownloadJSON:", error)
+
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
+      alert(`Unable to generate JSON: ${errorMessage}\n\nPlease try refreshing the page or contact support.`)
     }
   }
 
@@ -303,9 +389,9 @@ export default function ChatPage() {
       gradient: "from-red-500 to-pink-500",
     },
     {
-      icon: FileText,
-      label: "Generate Report",
-      query: "Generate a comprehensive daily report",
+      icon: Calendar1,
+      label: "Upcoming events",
+      query: "Upcoming events on our agenda",
       gradient: "from-indigo-500 to-purple-500",
     },
   ]
@@ -314,19 +400,16 @@ export default function ChatPage() {
     <AppShell title="Chat Assistant">
       {/* Enhanced Mega Hero Section */}
       <div className="relative overflow-hidden rounded-[2rem] border-4 border-blue-300/30 shadow-2xl mb-8 group">
-        {/* Animated gradient background */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 opacity-95 animate-gradient-xy" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
 
-        {/* Mega floating elements */}
         <div className="absolute top-6 right-8 w-40 h-40 bg-yellow-300/20 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-8 left-8 w-32 h-32 bg-pink-300/20 rounded-full blur-2xl animate-bounce" />
         <div className="absolute top-1/3 right-1/4 w-24 h-24 bg-cyan-300/20 rounded-full blur-xl animate-pulse delay-1000" />
         <div className="absolute bottom-1/4 left-1/3 w-20 h-20 bg-purple-300/30 rounded-full blur-lg animate-bounce delay-500" />
         <div className="absolute top-1/2 left-1/2 w-16 h-16 bg-white/10 rounded-full blur-md animate-ping" />
 
-        {/* Floating sparkles */}
         <Star className="absolute top-8 right-20 h-6 w-6 text-yellow-300 animate-bounce" />
         <Sparkles className="absolute top-16 left-16 h-7 w-7 text-pink-300 animate-pulse" />
         <Flame className="absolute bottom-12 right-32 h-6 w-6 text-orange-300 animate-bounce delay-300" />
@@ -334,7 +417,6 @@ export default function ChatPage() {
 
         <div className="relative p-10 md:p-16 text-white">
           <div className="flex flex-col md:flex-row items-center gap-6">
-            {/* Mega AI avatar */}
             <div className="inline-flex h-28 w-28 items-center justify-center bg-white/20 backdrop-blur-2xl rounded-[2rem] shadow-2xl border-4 border-white/40 animate-bounce relative group-hover:scale-110 transition-transform duration-500">
               <Bot className="h-14 w-14 text-white drop-shadow-2xl" />
               <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-yellow-300 to-orange-400 rounded-full flex items-center justify-center shadow-xl animate-pulse">
@@ -356,8 +438,6 @@ export default function ChatPage() {
                 Your Super-Intelligent Assistant
               </p>
 
-
-              {/* Feature badges */}
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-6">
                 <div className="flex items-center gap-2 bg-white/20 backdrop-blur-xl px-4 py-2 rounded-full border-2 border-white/30 shadow-lg hover:scale-105 transition-transform">
                   <Database className="h-5 w-5 text-cyan-200" />
@@ -368,19 +448,18 @@ export default function ChatPage() {
                   <span className="text-sm font-bold">Smart AI</span>
                 </div>
                 <div className="flex items-center gap-2 bg-white/20 backdrop-blur-xl px-4 py-2 rounded-full border-2 border-white/30 shadow-lg hover:scale-105 transition-transform">
-                  <Zap className="h-5 w-5 text-yellow-200" />
-                  <span className="text-sm font-bold">Lightning Fast</span>
-                </div>
-                <div className="flex items-center gap-2 bg-white/20 backdrop-blur-xl px-4 py-2 rounded-full border-2 border-white/30 shadow-lg hover:scale-105 transition-transform">
                   <FileDown className="h-5 w-5 text-green-200" />
                   <span className="text-sm font-bold">PDF Export</span>
+                </div>
+                <div className="flex items-center gap-2 bg-white/20 backdrop-blur-xl px-4 py-2 rounded-full border-2 border-white/30 shadow-lg hover:scale-105 transition-transform">
+                  <FileJson className="h-5 w-5 text-orange-200" />
+                  <span className="text-sm font-bold">JSON Export</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Bottom glow effect */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 opacity-75" />
       </div>
 
@@ -403,7 +482,6 @@ export default function ChatPage() {
               className="relative h-auto p-6 flex flex-col items-center gap-4 bg-white border-0 shadow-xl hover:shadow-2xl hover:scale-110 transition-all duration-300 group overflow-hidden rounded-2xl"
               disabled={isLoading}
             >
-              {/* Gradient background on hover */}
               <div
                 className={cn(
                   "absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-300",
@@ -411,7 +489,6 @@ export default function ChatPage() {
                 )}
               />
 
-              {/* Icon with gradient background */}
               <div
                 className={cn(
                   "relative p-4 rounded-2xl bg-gradient-to-br shadow-lg group-hover:scale-110 transition-transform duration-300",
@@ -421,12 +498,10 @@ export default function ChatPage() {
                 <action.icon className="h-8 w-8 text-white drop-shadow-lg" />
               </div>
 
-              {/* Label */}
               <span className="relative text-sm font-bold text-center leading-tight text-gray-800 group-hover:text-white transition-colors duration-300 z-10">
                 {action.label}
               </span>
 
-              {/* Sparkle effect */}
               <Sparkles className="absolute top-2 right-2 h-4 w-4 text-yellow-400 opacity-0 group-hover:opacity-100 animate-pulse transition-opacity" />
             </Button>
           ))}
@@ -434,7 +509,7 @@ export default function ChatPage() {
       </Section>
 
       {/* Mega Enhanced Chat Interface */}
-      <br></br>
+      <br />
       <Section
         title={
           <span className="flex items-center gap-3">
@@ -445,7 +520,6 @@ export default function ChatPage() {
         description="Ask anything about your childcare center - I'm here to help! 💬"
       >
         <div className="relative bg-white rounded-[2rem] border-4 border-purple-200/50 shadow-2xl overflow-hidden">
-          {/* Animated background pattern */}
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-purple-50/50 to-pink-50/50 opacity-50" />
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIgZmlsbD0icHVycGxlIiBmaWxsLW9wYWNpdHk9IjAuMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30" />
 
@@ -511,7 +585,6 @@ export default function ChatPage() {
                 )}
                 style={{ animationDelay: `${messageIndex * 0.1}s` }}
               >
-                {/* Assistant Avatar */}
                 {message.role === "assistant" && (
                   <div className="relative flex-shrink-0">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 via-pink-500 to-blue-500 flex items-center justify-center shadow-xl border-3 border-white">
@@ -522,7 +595,6 @@ export default function ChatPage() {
                 )}
 
                 <div className={cn("max-w-[75%] space-y-3", message.role === "user" && "items-end")}>
-                  {/* Message Bubble */}
                   <div
                     className={cn(
                       "rounded-3xl px-6 py-4 shadow-xl border-2 relative overflow-hidden",
@@ -539,7 +611,6 @@ export default function ChatPage() {
                       {message.isLoading && !message.content ? <TypingIndicator /> : message.content}
                     </div>
 
-                    {/* Message Footer */}
                     {!message.isLoading && (
                       <div
                         className={cn(
@@ -567,10 +638,58 @@ export default function ChatPage() {
                     )}
                   </div>
 
-                 
+                  {/* Download Options - JSON and PDF */}
+                  {message.reportData && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-500 font-semibold flex items-center gap-2">
+                        <Download className="w-3.5 h-3.5" />
+                        Choose your download format:
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button
+                          onClick={() => handleDownloadJSON(message.reportData)}
+                          className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 group"
+                        >
+                          <FileJson className="w-5 h-5 mr-2 group-hover:animate-bounce" />
+                          <span className="font-bold">Download JSON</span>
+                        </Button>
+
+                        <Button
+                          onClick={() => handleDownloadPDF(message.reportData)}
+                          className="bg-gradient-to-br from-purple-500 via-pink-500 to-blue-500 hover:to-pink-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 group"
+                        >
+                          <FileDown className="w-5 h-5 mr-2 group-hover:animate-bounce" />
+                          <span className="font-bold">Download PDF</span>
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {message.suggestions && message.suggestions.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-500 font-medium flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" />
+                        Suggested follow-up questions:
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {message.suggestions.map((suggestion, idx) => (
+                          <Button
+                            key={idx}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSuggestionClick(suggestion)}
+                            className="text-xs h-auto py-3 px-4 justify-start text-left bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 hover:border-blue-400 hover:shadow-lg transition-all duration-300 hover:scale-105"
+                            disabled={isLoading}
+                          >
+                            <MessageCircle className="w-4 h-4 mr-2 flex-shrink-0" />
+                            <span className="line-clamp-2">{suggestion}</span>
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* User Avatar */}
                 {message.role === "user" && (
                   <div className="relative flex-shrink-0">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center shadow-xl border-3 border-white">
@@ -620,12 +739,16 @@ export default function ChatPage() {
               </Button>
             </div>
 
-            {/* Stats Bar */}
             <div className="flex items-center justify-center gap-4 mt-4 text-xs text-gray-500 font-semibold">
               <span>•</span>
               <div className="flex items-center gap-1">
                 <MessageCircle className="w-3 h-3" />
                 <span>{messages.filter((m) => m.role === "user").length} messages sent</span>
+              </div>
+              <span>•</span>
+              <div className="flex items-center gap-1">
+                <FileJson className="w-3 h-3" />
+                <span>JSON & PDF Export Available</span>
               </div>
               <span>•</span>
             </div>

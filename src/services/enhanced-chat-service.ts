@@ -7,7 +7,7 @@ const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 const GEMINI_MODEL = "google/gemini-2.0-flash-lite-001"
 
 interface QueryIntent {
-  entity: "children" | "attendance" | "billing" | "health" | "media" | "report" | "shift" | "booking" | "event" | "album" | "staff"
+  entity: "children" | "attendance" | "billing" | "health" | "media" | "report" | "shift" | "booking" | "event" | "album" | "staff" | "user"
   type: "list" | "analyze" | "generate"
   filters?: Record<string, any>
   timeframe?: string

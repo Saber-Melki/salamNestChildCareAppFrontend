@@ -2,7 +2,7 @@ import type React from "react"
 import { Outlet, useLocation, Navigate } from "react-router-dom"
 import { BrandingProvider } from "../contexts/branding"
 import { RBACProvider } from "../contexts/rbac"
-// import { AppShell } from "../components/app-shell"
+import { ThemeProvider } from "../contexts/theme"
 
 function publicRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation()
@@ -15,11 +15,12 @@ function publicRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    
-    <BrandingProvider>
+    <ThemeProvider>
+      <BrandingProvider>
         <RBACProvider>
-            <Outlet />
+          <Outlet />
         </RBACProvider>
-    </BrandingProvider>
+      </BrandingProvider>
+    </ThemeProvider>
   )
 }

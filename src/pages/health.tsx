@@ -5,8 +5,8 @@ import { AppShell, Section } from "../components/app-shell"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table"
 import { Badge } from "../components/ui/badge"
+import { Card, CardContent } from "../components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -35,22 +35,25 @@ import {
   FileText,
   Edit,
   Trash2,
-  Eye,
   Stethoscope,
   Shield,
   Activity,
   Calendar,
-  Clock,
   User,
   Search,
   Filter,
-  NotepadText,
   FileDown,
   CheckCircle,
+  TrendingUp,
+  Syringe,
+  Pill,
+  Thermometer,
+  Eye,
+  X,
+  FolderPlus,
 } from "lucide-react"
 import { fetchChildren, type ChildRow } from "../services/child.service"
 import { healthPDFService } from "../services/health-pdf-service"
-import { useBranding } from "../contexts/branding"
 
 interface HealthNote {
   id: string
@@ -58,10 +61,6 @@ interface HealthNote {
   description: string
   date: string
   followUp?: string
-  childId: string
-  child?: string
-  createdAt?: string
-  updatedAt?: string
   priority?: "low" | "medium" | "high"
   status?: "active" | "resolved" | "pending"
 }
@@ -69,63 +68,96 @@ interface HealthNote {
 interface HealthRecord {
   id: string
   child: string
-  childId: string
   allergies: string
   immunizations: string
   emergency: string
   notes: HealthNote[]
-  bloodType?: string
-  medications?: string[]
-  lastCheckup?: string
-  emergencyContact?: {
-    name: string
-    phone: string
-    relationship: string
-  }
 }
 
 const NOTE_TYPES = [
-  { value: "Incident", label: "🚨 Incident Report", color: "from-red-500 to-pink-500", bgColor: "bg-red-50" },
-  { value: "Medication", label: "💊 Medication", color: "from-blue-500 to-indigo-500", bgColor: "bg-blue-50" },
-  { value: "Allergy", label: "⚠️ Allergy Update", color: "from-orange-500 to-amber-500", bgColor: "bg-orange-50" },
-  { value: "Immunization", label: "💉 Immunization", color: "from-green-500 to-emerald-500", bgColor: "bg-green-50" },
-  { value: "Checkup", label: "🩺 Health Checkup", color: "from-purple-500 to-violet-500", bgColor: "bg-purple-50" },
-  { value: "Observation", label: "👁️ Observation", color: "from-teal-500 to-cyan-500", bgColor: "bg-teal-50" },
+  {
+    value: "Incident",
+    label: "🚨 Incident Report",
+    color: "from-red-500 to-pink-500",
+    bgColor: "bg-red-50 dark:bg-red-950/30",
+    icon: AlertTriangle,
+  },
+  {
+    value: "Medication",
+    label: "💊 Medication",
+    color: "from-blue-500 to-indigo-500",
+    bgColor: "bg-blue-50 dark:bg-blue-950/30",
+    icon: Pill,
+  },
+  {
+    value: "Allergy",
+    label: "⚠️ Allergy Update",
+    color: "from-orange-500 to-amber-500",
+    bgColor: "bg-orange-50 dark:bg-orange-950/30",
+    icon: Shield,
+  },
+  {
+    value: "Immunization",
+    label: "💉 Immunization",
+    color: "from-green-500 to-emerald-500",
+    bgColor: "bg-green-50 dark:bg-green-950/30",
+    icon: Syringe,
+  },
+  {
+    value: "Checkup",
+    label: "🩺 Health Checkup",
+    color: "from-purple-500 to-violet-500",
+    bgColor: "bg-purple-50 dark:bg-purple-950/30",
+    icon: Stethoscope,
+  },
+  {
+    value: "Observation",
+    label: "👁️ Observation",
+    color: "from-teal-500 to-cyan-500",
+    bgColor: "bg-teal-50 dark:bg-teal-950/30",
+    icon: Eye,
+  },
   {
     value: "Temperature",
     label: "🌡️ Temperature Check",
     color: "from-yellow-500 to-orange-500",
-    bgColor: "bg-yellow-50",
+    bgColor: "bg-yellow-50 dark:bg-yellow-950/30",
+    icon: Thermometer,
   },
-  { value: "Injury", label: "🩹 Injury Report", color: "from-red-600 to-rose-600", bgColor: "bg-red-50" },
+  {
+    value: "Injury",
+    label: "🩹 Injury Report",
+    color: "from-red-600 to-rose-600",
+    bgColor: "bg-red-50 dark:bg-red-950/30",
+    icon: AlertTriangle,
+  },
 ]
 
 export default function Health() {
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const [createRecordDialogOpen, setCreateRecordDialogOpen] = useState(false)
+  const [noteDialogOpen, setNoteDialogOpen] = useState(false)
   const [editingNote, setEditingNote] = useState<HealthNote | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [noteToDelete, setNoteToDelete] = useState<HealthNote | null>(null)
-  const [viewNotesDialog, setViewNotesDialog] = useState(false)
-  const [selectedChild, setSelectedChild] = useState<HealthRecord | null>(null)
+  const [medicalRecordOpen, setMedicalRecordOpen] = useState(false)
+  const [selectedRecord, setSelectedRecord] = useState<HealthRecord | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState("all")
   const [exportingPDF, setExportingPDF] = useState(false)
   const [exportSuccess, setExportSuccess] = useState(false)
 
-  const [rows, setRows] = useState<HealthRecord[]>([])
+  const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([])
   const [children, setChildren] = useState<ChildRow[]>([])
   const [loading, setLoading] = useState(true)
 
-  // const { centerName } = useBranding()
+  const [recordFormData, setRecordFormData] = useState({
+    child: "",
+    allergies: "None",
+    immunizations: "Up to date",
+    emergency: "",
+  })
 
-  const childrenOptions = children.map((child) => ({
-    id: child.id,
-    child: `${child.firstName} ${child.lastName}`,
-  }))
-
-  const [formData, setFormData] = useState({
-    childId: "",
-    childName: "",
+  const [noteFormData, setNoteFormData] = useState({
     noteType: "",
     description: "",
     date: new Date().toISOString().split("T")[0],
@@ -134,45 +166,72 @@ export default function Health() {
     status: "active" as "active" | "resolved" | "pending",
   })
 
+  // Get children that don't have medical records yet
+  const childrenWithoutRecords = children.filter(
+    (child) => !healthRecords.find((record) => record.child === `${child.firstName} ${child.lastName}`),
+  )
+
   // ----------- API Functions -------------
-  const fetchHealthRecords = async (): Promise<HealthRecord[]> => {
-    const res = await fetch("http://localhost:8080/health")
-    if (!res.ok) throw new Error("Failed to fetch health records")
-    return res.json()
-  }
+  // ----------- API Functions -------------
 
-  const createHealthNote = async (note: Partial<HealthNote>) => {
-    const res = await fetch("http://localhost:8080/health/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...note,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }),
-    })
-    if (!res.ok) throw new Error("Failed to create health note")
-    return res.json()
-  }
+// Fetch all health records
+const fetchHealthRecords = async (): Promise<HealthRecord[]> => {
+  const res = await fetch("http://localhost:8080/health");
+  if (!res.ok) throw new Error("Failed to fetch health records");
+  return res.json();
+};
 
-  const updateHealthNote = async (id: string, note: Partial<HealthNote>) => {
-    const res = await fetch(`http://localhost:8080/health/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...note,
-        updatedAt: new Date().toISOString(),
-      }),
-    })
-    if (!res.ok) throw new Error("Failed to update health note")
-    return res.json()
-  }
+// Create a new health record
+const createHealthRecord = async (record: Partial<HealthRecord>) => {
+  const res = await fetch("http://localhost:8080/health", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) throw new Error("Failed to create health record");
+  return res.json();
+};
 
-  const deleteHealthNote = async (id: string) => {
-    const res = await fetch(`http://localhost:8080/health/${id}`, { method: "DELETE" })
-    if (!res.ok) throw new Error("Failed to delete health note")
-    return res.json()
-  }
+// Update an existing health record
+const updateHealthRecord = async (id: string, record: Partial<HealthRecord>) => {
+  const res = await fetch(`http://localhost:8080/health/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) throw new Error("Failed to update health record");
+  return res.json();
+};
+
+// Create a health note for a specific health record
+const createHealthNote = async (healthId: string, note: Partial<HealthNote>) => {
+  const res = await fetch(`http://localhost:8080/health/${healthId}/notes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(note),
+  });
+};
+
+// Update a specific health note
+const updateHealthNote = async (healthId: string, noteId: string, note: Partial<HealthNote>) => {
+  const res = await fetch(`http://localhost:8080/health/${healthId}/notes/${noteId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(note),
+  });
+  if (!res.ok) throw new Error("Failed to update health note");
+  return res.json();
+};
+
+
+// Delete a specific health note
+const deleteHealthNote = async (healthId: string, noteId: string) => {
+  const res = await fetch(`http://localhost:8080/health/${healthId}/notes/${noteId}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Failed to delete health note");
+  return res.json();
+};
 
   // ----------- PDF Export Function -------------
   const exportHealthRecordsPDF = async () => {
@@ -180,9 +239,7 @@ export default function Health() {
     setExportSuccess(false)
 
     try {
-      // Generate PDF using the health PDF service with Salam Nest branding
-      healthPDFService.generateHealthRecordsPDF(filteredRows, "Salam Nest")
-
+      healthPDFService.generateHealthRecordsPDF(filteredRecords, "SalamNest")
       setExportSuccess(true)
       setTimeout(() => setExportSuccess(false), 3000)
     } catch (error) {
@@ -199,7 +256,7 @@ export default function Health() {
       setLoading(true)
       const [childrenData, healthData] = await Promise.all([fetchChildren(), fetchHealthRecords()])
       setChildren(childrenData)
-      setRows(healthData)
+      setHealthRecords(healthData)
     } catch (err) {
       console.error(err)
     } finally {
@@ -212,10 +269,17 @@ export default function Health() {
   }, [])
 
   // ----------- Handlers -------------
-  const resetForm = () => {
-    setFormData({
-      childId: "",
-      childName: "",
+  const resetRecordForm = () => {
+    setRecordFormData({
+      child: "",
+      allergies: "None",
+      immunizations: "Up to date",
+      emergency: "",
+    })
+  }
+
+  const resetNoteForm = () => {
+    setNoteFormData({
       noteType: "",
       description: "",
       date: new Date().toISOString().split("T")[0],
@@ -225,11 +289,14 @@ export default function Health() {
     })
   }
 
+  const openCreateRecordDialog = () => {
+    resetRecordForm()
+    setCreateRecordDialogOpen(true)
+  }
+
   const openEditDialog = (note: HealthNote) => {
     setEditingNote(note)
-    setFormData({
-      childId: note.childId,
-      childName: note.child || "",
+    setNoteFormData({
       noteType: note.noteType,
       description: note.description,
       date: note.date,
@@ -237,25 +304,19 @@ export default function Health() {
       priority: note.priority || "medium",
       status: note.status || "active",
     })
-    setDialogOpen(true)
+    setNoteDialogOpen(true)
   }
 
-  const openAddDialog = (childRecord?: HealthRecord) => {
+  const openAddNoteDialog = (record: HealthRecord) => {
     setEditingNote(null)
-    resetForm()
-    if (childRecord) {
-      setFormData((prev) => ({
-        ...prev,
-        childId: childRecord.childId,
-        childName: childRecord.child,
-      }))
-    }
-    setDialogOpen(true)
+    setSelectedRecord(record)
+    resetNoteForm()
+    setNoteDialogOpen(true)
   }
 
-  const viewAllNotes = (record: HealthRecord) => {
-    setSelectedChild(record)
-    setViewNotesDialog(true)
+  const openMedicalRecord = (record: HealthRecord) => {
+    setSelectedRecord(record)
+    setMedicalRecordOpen(true)
   }
 
   const handleDeleteNote = (note: HealthNote) => {
@@ -264,43 +325,50 @@ export default function Health() {
   }
 
   const confirmDelete = async () => {
-    if (noteToDelete) {
+    if (noteToDelete && selectedRecord) {
       try {
-        await deleteHealthNote(noteToDelete.id)
+        await deleteHealthNote(selectedRecord.id, noteToDelete.id)
         await loadData()
         setNoteToDelete(null)
       } catch (err) {
         console.error(err)
-        alert("Failed to delete health note")
       }
     }
     setDeleteDialogOpen(false)
   }
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleCreateRecord = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     try {
-      const selectedChild = childrenOptions.find((c) => c.id === formData.childId)
-      if (!selectedChild) {
-        alert("Please select a valid child!")
+      await createHealthRecord(recordFormData)
+      await loadData()
+      setCreateRecordDialogOpen(false)
+      resetRecordForm()
+    } catch (err) {
+      console.error("Error creating health record:", err)
+      alert("Failed to create health record")
+    }
+  }
+
+  const handleSubmitNote = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    try {
+      if (!selectedRecord) {
+        alert("Please select a medical record!")
         return
       }
 
-      const noteData = {
-        ...formData,
-        child: selectedChild.child,
-      }
-
       if (editingNote) {
-        await updateHealthNote(editingNote.id, noteData)
+        await updateHealthNote(selectedRecord.id, editingNote.id, noteFormData)
       } else {
-        await createHealthNote(noteData)
+        await createHealthNote(selectedRecord.id, noteFormData)
       }
 
       await loadData()
-      setDialogOpen(false)
-      resetForm()
+      setNoteDialogOpen(false)
+      resetNoteForm()
       setEditingNote(null)
     } catch (err) {
       console.error("Error saving health note:", err)
@@ -309,7 +377,7 @@ export default function Health() {
   }
 
   // Filter and search functionality
-  const filteredRows = rows.filter((record) => {
+  const filteredRecords = healthRecords.filter((record) => {
     const matchesSearch = record.child.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesFilter = filterType === "all" || record.notes.some((note) => note.noteType === filterType)
     return matchesSearch && matchesFilter
@@ -318,26 +386,26 @@ export default function Health() {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
-        return "bg-red-100 text-red-800 border-red-200"
+        return "bg-red-100 dark:bg-red-950/50 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800"
       case "medium":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200"
+        return "bg-yellow-100 dark:bg-yellow-950/50 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800"
       case "low":
-        return "bg-green-100 text-green-800 border-green-200"
+        return "bg-green-100 dark:bg-green-950/50 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800"
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
+        return "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700"
     }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
-        return "bg-blue-100 text-blue-800 border-blue-200"
+        return "bg-blue-100 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800"
       case "resolved":
-        return "bg-green-100 text-green-800 border-green-200"
+        return "bg-green-100 dark:bg-green-950/50 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800"
       case "pending":
-        return "bg-orange-100 text-orange-800 border-orange-200"
+        return "bg-orange-100 dark:bg-orange-950/50 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-800"
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
+        return "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700"
     }
   }
 
@@ -346,17 +414,28 @@ export default function Health() {
     return type?.label.split(" ")[0] || "📝"
   }
 
+  // Calculate stats
+  const totalNotes = healthRecords.reduce((acc, record) => acc + record.notes.length, 0)
+  const activeNotes = healthRecords.reduce(
+    (acc, record) => acc + record.notes.filter((n) => n.status === "active").length,
+    0,
+  )
+  const highPriorityNotes = healthRecords.reduce(
+    (acc, record) => acc + record.notes.filter((n) => n.priority === "high").length,
+    0,
+  )
+
   return (
     <AppShell title="Health Records">
       {/* Enhanced Hero Header */}
-      <div className="relative overflow-hidden rounded-3xl border shadow-2xl mb-8">
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 opacity-95" />
+      <div className="relative overflow-hidden rounded-3xl border border-emerald-200 dark:border-emerald-800 shadow-2xl mb-8">
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 dark:from-emerald-900 dark:via-teal-900 dark:to-cyan-900 opacity-95 dark:opacity-90" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
 
         {/* Floating decorative elements */}
         <div className="absolute top-4 right-4 w-20 h-20 bg-white/10 rounded-full blur-xl animate-pulse" />
         <div className="absolute bottom-6 left-6 w-16 h-16 bg-white/5 rounded-full blur-lg animate-bounce" />
-        <div className="absolute top-1/2 right-1/3 w-12 h-12 bg-white/10 rounded-full blur-md animate-pulse delay-1000" />
+        <div className="absolute top-1/2 right-1/3 w-12 h-12 bg-white/10 rounded-full blur-md animate-pulse animation-delay-1000" />
 
         <div className="relative p-8 md:p-12 text-white">
           <div className="flex items-start gap-4">
@@ -365,10 +444,10 @@ export default function Health() {
             </div>
             <div className="flex-1">
               <h1 className="text-4xl md:text-5xl font-bold leading-tight bg-gradient-to-r from-white to-emerald-100 bg-clip-text text-transparent drop-shadow-lg">
-                Health Records
+                Medical Records
               </h1>
               <p className="mt-3 text-xl text-emerald-50/90 font-medium">
-                Comprehensive medical tracking, allergies, and emergency information
+                Comprehensive health tracking with visual timeline and medical history
               </p>
               <div className="flex items-center gap-6 mt-4 text-emerald-100/80">
                 <div className="flex items-center gap-2">
@@ -389,20 +468,80 @@ export default function Health() {
         </div>
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-emerald-500 dark:bg-emerald-600 rounded-xl shadow-lg">
+                <User className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Medical Records</p>
+                <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">{healthRecords.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/50 dark:to-indigo-950/50">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-500 dark:bg-blue-600 rounded-xl shadow-lg">
+                <FileText className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Total Notes</p>
+                <p className="text-3xl font-bold text-blue-700 dark:text-blue-400">{totalNotes}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-50 to-amber-100 dark:from-orange-950/50 dark:to-amber-950/50">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-orange-500 dark:bg-orange-600 rounded-xl shadow-lg">
+                <TrendingUp className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Active Cases</p>
+                <p className="text-3xl font-bold text-orange-700 dark:text-orange-400">{activeNotes}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-red-50 to-pink-100 dark:from-red-950/50 dark:to-pink-950/50">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-red-500 dark:bg-red-600 rounded-xl shadow-lg">
+                <AlertTriangle className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">High Priority</p>
+                <p className="text-3xl font-bold text-red-700 dark:text-red-400">{highPriorityNotes}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Enhanced Section */}
       <Section
-        title="Medical Records"
-        description="Comprehensive health tracking with multiple notes per child, allergies, immunizations, and emergency information."
+        title="Children Medical Records"
+        description="Create a medical record for each child, then add notes to track their health history."
       >
         {/* Enhanced Controls */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="flex gap-3">
             <Button
-              onClick={() => openAddDialog()}
-              className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white border-0 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+              onClick={openCreateRecordDialog}
+              disabled={childrenWithoutRecords.length === 0}
+              className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white border-0 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Plus className="h-5 w-5 mr-2" />
-              New Health Note
+              <FolderPlus className="h-5 w-5 mr-2" />
+              Create Medical Record
             </Button>
 
             <Button
@@ -411,8 +550,8 @@ export default function Health() {
               disabled={exportingPDF}
               className={`border-2 transition-all duration-300 ${
                 exportSuccess
-                  ? "border-green-300 bg-green-50 text-green-700"
-                  : "border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 bg-transparent"
+                  ? "border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-400"
+                  : "border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-300 dark:hover:border-emerald-700 bg-transparent"
               }`}
             >
               {exportingPDF ? (
@@ -422,12 +561,12 @@ export default function Health() {
                 </>
               ) : exportSuccess ? (
                 <>
-                  <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
+                  <CheckCircle className="h-5 w-5 mr-2 text-green-600 dark:text-green-400" />
                   PDF Downloaded!
                 </>
               ) : (
                 <>
-                  <FileDown className="h-5 w-5 mr-2 text-emerald-600" />
+                  <FileDown className="h-5 w-5 mr-2 text-emerald-600 dark:text-emerald-400" />
                   Export PDF
                 </>
               )}
@@ -437,16 +576,16 @@ export default function Health() {
           {/* Search and Filter */}
           <div className="flex gap-3 flex-1 max-w-md ml-auto">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
               <Input
                 placeholder="Search children..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 border-2 border-emerald-200 focus:border-emerald-400"
+                className="pl-10 border-2 border-emerald-200 dark:border-emerald-800 focus:border-emerald-400 dark:focus:border-emerald-600 bg-white dark:bg-gray-900"
               />
             </div>
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-40 border-2 border-emerald-200 focus:border-emerald-400">
+              <SelectTrigger className="w-40 border-2 border-emerald-200 dark:border-emerald-800 focus:border-emerald-400 dark:focus:border-emerald-600 bg-white dark:bg-gray-900">
                 <Filter className="h-4 w-4 mr-2" />
                 {filterType === "all" ? "All Types" : filterType}
               </SelectTrigger>
@@ -465,189 +604,554 @@ export default function Health() {
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent"></div>
-            <span className="ml-4 text-lg text-gray-600">Loading health records...</span>
+            <span className="ml-4 text-lg text-gray-600 dark:text-gray-400">Loading medical records...</span>
+          </div>
+        ) : filteredRecords.length === 0 ? (
+          <div className="text-center py-16 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-3xl border-2 border-dashed border-emerald-300 dark:border-emerald-800">
+            <div className="w-24 h-24 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900 dark:to-teal-900 rounded-full mx-auto mb-6 flex items-center justify-center">
+              <FolderPlus className="h-12 w-12 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2">No Medical Records Yet</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+              Start creating medical records for your children to track their health history, allergies, and medical
+              notes.
+            </p>
+            <Button
+              onClick={openCreateRecordDialog}
+              disabled={childrenWithoutRecords.length === 0}
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-xl hover:shadow-2xl disabled:opacity-50"
+            >
+              <FolderPlus className="h-5 w-5 mr-2" />
+              Create First Medical Record
+            </Button>
+            {childrenWithoutRecords.length === 0 && (
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-4">All children already have medical records</p>
+            )}
           </div>
         ) : (
-          <div className="rounded-2xl border-2 border-emerald-100 bg-gradient-to-br from-white to-emerald-50/30 overflow-hidden shadow-xl">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600">
-                  <TableHead className="text-white font-semibold text-base">Child</TableHead>
-                  <TableHead className="text-white font-semibold text-base">Allergies</TableHead>
-                  <TableHead className="text-white font-semibold text-base">Immunizations</TableHead>
-                  <TableHead className="text-white font-semibold text-base">Emergency Info</TableHead>
-                  <TableHead className="text-white font-semibold text-base">Health Notes</TableHead>
-                  <TableHead className="text-white font-semibold text-base">Recent Activity</TableHead>
-                  <TableHead className="text-white font-semibold text-base w-[120px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRows.map((record, index) => {
-                  const recentNotes = record.notes
-                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                    .slice(0, 3)
-                  const hasHighPriorityNotes = record.notes.some((note) => note.priority === "high")
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredRecords.map((record) => {
+              const recentNotes = record.notes
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .slice(0, 3)
+              const hasHighPriorityNotes = record.notes.some((note) => note.priority === "high")
+              const hasActiveNotes = record.notes.some((note) => note.status === "active")
 
-                  return (
-                    <TableRow
-                      key={record.id}
-                      className={`hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50 transition-all duration-200 ${
-                        index % 2 === 0 ? "bg-white" : "bg-emerald-25"
-                      } ${hasHighPriorityNotes ? "border-l-4 border-l-red-400" : ""}`}
-                    >
-                      <TableCell className="font-semibold text-gray-800">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-gray-500" />
+              return (
+                <Card
+                  key={record.id}
+                  className={`relative group overflow-hidden border-2 transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer ${
+                    hasHighPriorityNotes
+                      ? "border-red-300 dark:border-red-800 bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-950/30 dark:to-pink-950/30"
+                      : "border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-white to-emerald-50/30 dark:from-gray-900 dark:to-emerald-950/30"
+                  }`}
+                  onClick={() => openMedicalRecord(record)}
+                >
+                  {/* Priority Indicator */}
+                  {hasHighPriorityNotes && (
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-pink-500 animate-pulse" />
+                  )}
+
+                  <CardContent className="p-6">
+                    <br></br>
+                    <div className="flex items-start gap-4 mb-4">
+                      <br></br>
+                      <div className="relative">
+                        <img
+                          src="/child.jpg"
+                          alt={record.child}
+                          className="w-16 h-16 rounded-full border-4 border-white dark:border-gray-800 shadow-lg"
+                        />
+                        {hasActiveNotes && (
+                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-red-500 to-pink-500 rounded-full animate-ping" />
+                        )}
+                        {hasActiveNotes && (
+                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1 flex items-center gap-2">
                           {record.child}
                           {hasHighPriorityNotes && (
-                            <Badge className="bg-red-100 text-red-800 text-xs">High Priority</Badge>
+                            <Badge className="bg-red-100 dark:bg-red-950/50 text-red-800 dark:text-red-300 text-xs">
+                              High Priority
+                            </Badge>
                           )}
+                        </h3>
+                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                          <Calendar className="h-3 w-3" />
+                          <span>
+                            Last updated:{" "}
+                            {record.notes.length > 0
+                              ? new Date(
+                                  Math.max(...record.notes.map((n) => new Date(n.date).getTime())),
+                                ).toLocaleDateString()
+                              : "N/A"}
+                          </span>
                         </div>
-                      </TableCell>
-                      <TableCell>
+                      </div>
+                    </div>
+
+                    {/* Quick Info */}
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4 text-orange-500 dark:text-orange-400 flex-shrink-0" />
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Allergies:</span>
                         {record.allergies === "None" ? (
-                          <span className="text-gray-500 italic">None</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-500 italic">None</span>
                         ) : (
-                          <Badge
-                            variant="destructive"
-                            className="flex items-center gap-1 bg-gradient-to-r from-pink-500 to-pink-400 hover:from-pink-600 hover:to-pink-600 shadow-lg"
-                          >
-                            <AlertTriangle className="h-3 w-3" />
+                          <Badge className="bg-red-100 dark:bg-red-950/50 text-red-800 dark:text-red-300 text-xs">
                             {record.allergies}
                           </Badge>
                         )}
-                      </TableCell>
-                      <TableCell>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Syringe className="h-4 w-4 text-green-500 dark:text-green-400 flex-shrink-0" />
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Immunizations:</span>
                         <Badge
-                          variant={record.immunizations.includes("Missing") ? "destructive" : "secondary"}
-                          className={
+                          className={`text-xs ${
                             record.immunizations.includes("Missing")
-                              ? "bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg"
-                              : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg"
-                          }
+                              ? "bg-red-100 dark:bg-red-950/50 text-red-800 dark:text-red-300"
+                              : "bg-green-100 dark:bg-green-950/50 text-green-800 dark:text-green-300"
+                          }`}
                         >
                           {record.immunizations}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-gray-700 max-w-[200px] truncate">{record.emergency}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50">
-                            <NotepadText className="h-3 w-3 mr-1" />
-                            {record.notes.length} notes
-                          </Badge>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => openAddDialog(record)}
-                            className="h-7 px-2 text-xs hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 transition-colors"
+                      </div>
+                    </div>
+
+                    {/* Notes Count */}
+                    <div className="flex items-center justify-between mb-4 p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                          {record.notes.length} Medical Notes
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedRecord(record)
+                          openAddNoteDialog(record)
+                        }}
+                        className="h-7 px-2 text-xs hover:bg-emerald-100 dark:hover:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 transition-colors"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add
+                      </Button>
+                    </div>
+
+                    {/* Recent Notes Preview */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        Recent Activity
+                      </p>
+                      {recentNotes.length > 0 ? (
+                        recentNotes.map((note) => (
+                          <div
+                            key={note.id}
+                            className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700"
                           >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Add
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          {recentNotes.length > 0 ? (
-                            recentNotes.map((note) => (
-                              <div key={note.id} className="flex items-center gap-2 text-xs">
-                                <span className="text-lg">{getNoteTypeIcon(note.noteType)}</span>
-                                <span className="text-gray-600 truncate max-w-[100px]">{note.noteType}</span>
-                                <Badge className={`text-xs ${getPriorityColor(note.priority || "medium")}`}>
-                                  {note.priority}
-                                </Badge>
-                              </div>
-                            ))
-                          ) : (
-                            <span className="text-gray-400 text-xs italic">No recent activity</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => viewAllNotes(record)}
-                            className="h-8 w-8 p-0 hover:bg-emerald-100 hover:scale-110 transition-all duration-200 rounded-full"
-                            title="View all notes"
-                          >
-                            <Eye className="h-4 w-4 text-emerald-600" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => openAddDialog(record)}
-                            className="h-8 w-8 p-0 hover:bg-blue-100 hover:scale-110 transition-all duration-200 rounded-full"
-                            title="Add new note"
-                          >
-                            <Plus className="h-4 w-4 text-blue-600" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
+                            <span className="text-lg">{getNoteTypeIcon(note.noteType)}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">
+                                {note.noteType}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-500">{note.date}</p>
+                            </div>
+                            <Badge className={`text-xs ${getPriorityColor(note.priority || "medium")}`}>
+                              {note.priority}
+                            </Badge>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-gray-400 dark:text-gray-500 italic text-center py-4">
+                          No medical notes yet
+                        </p>
+                      )}
+                    </div>
+
+                    {/* View Details Button */}
+                    <Button
+                      variant="outline"
+                      className="w-full mt-4 border-2 border-emerald-300 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 font-semibold bg-transparent"
+                      onClick={() => openMedicalRecord(record)}
+                    >
+                      View Complete Medical Record
+                      <Activity className="h-4 w-4 ml-2" />
+                    </Button>
+                  </CardContent>
+
+                  {/* Hover Effect Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-teal-500/0 to-cyan-500/0 group-hover:from-emerald-500/5 group-hover:via-teal-500/5 group-hover:to-cyan-500/5 transition-all duration-500 pointer-events-none" />
+                </Card>
+              )
+            })}
           </div>
         )}
       </Section>
 
-      {/* Enhanced Add/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-3xl border-0 shadow-2xl bg-gradient-to-br from-white to-emerald-50/30">
+      {/* Create Medical Record Dialog */}
+      <Dialog open={createRecordDialogOpen} onOpenChange={setCreateRecordDialogOpen}>
+        <DialogContent className="max-w-2xl border-0 shadow-2xl bg-gradient-to-br from-white to-emerald-50/30 dark:from-gray-900 dark:to-emerald-950/30">
+          <DialogHeader className="pb-6">
+            <DialogTitle className="flex items-center gap-3 text-2xl">
+              <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl shadow-lg">
+                <FolderPlus className="h-6 w-6 text-white" />
+              </div>
+              Create Medical Record
+            </DialogTitle>
+            <DialogDescription className="text-base text-gray-600 dark:text-gray-400 mt-2">
+              Create a new medical record for a child. You can add medical notes to this record after creation.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateRecord}>
+            <DialogBody className="space-y-6">
+              {/* Child Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="child" className="text-base font-semibold text-gray-700 dark:text-gray-300">
+                  Child *
+                </Label>
+                <Select
+                  value={recordFormData.child}
+                  onValueChange={(value) => setRecordFormData((prev) => ({ ...prev, child: value }))}
+                >
+                  <SelectTrigger className="h-12 border-2 border-emerald-200 dark:border-emerald-800 focus:border-emerald-400 dark:focus:border-emerald-600 bg-white dark:bg-gray-900">
+                    {recordFormData.child || "Select child"}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {childrenWithoutRecords.map((child) => (
+                      <SelectItem
+                        key={child.id}
+                        value={`${child.firstName} ${child.lastName}`}
+                        className="hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
+                      >
+                        {child.firstName} {child.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {childrenWithoutRecords.length === 0 && (
+                  <p className="text-sm text-gray-500 dark:text-gray-500">All children already have medical records</p>
+                )}
+              </div>
+
+              {/* Allergies */}
+              <div className="space-y-2">
+                <Label htmlFor="allergies" className="text-base font-semibold text-gray-700 dark:text-gray-300">
+                  Allergies
+                </Label>
+                <Input
+                  id="allergies"
+                  value={recordFormData.allergies}
+                  onChange={(e) => setRecordFormData((prev) => ({ ...prev, allergies: e.target.value }))}
+                  placeholder="Enter known allergies or 'None'"
+                  className="h-12 border-2 border-emerald-200 dark:border-emerald-800 focus:border-emerald-400 dark:focus:border-emerald-600 bg-white dark:bg-gray-900"
+                />
+              </div>
+
+              {/* Immunizations */}
+              <div className="space-y-2">
+                <Label htmlFor="immunizations" className="text-base font-semibold text-gray-700 dark:text-gray-300">
+                  Immunizations Status
+                </Label>
+                <Input
+                  id="immunizations"
+                  value={recordFormData.immunizations}
+                  onChange={(e) => setRecordFormData((prev) => ({ ...prev, immunizations: e.target.value }))}
+                  placeholder="e.g., Up to date, Missing MMR, etc."
+                  className="h-12 border-2 border-emerald-200 dark:border-emerald-800 focus:border-emerald-400 dark:focus:border-emerald-600 bg-white dark:bg-gray-900"
+                />
+              </div>
+
+              {/* Emergency Contact */}
+              <div className="space-y-2">
+                <Label htmlFor="emergency" className="text-base font-semibold text-gray-700 dark:text-gray-300">
+                  Emergency Contact Information *
+                </Label>
+                <Textarea
+                  id="emergency"
+                  value={recordFormData.emergency}
+                  onChange={(e) => setRecordFormData((prev) => ({ ...prev, emergency: e.target.value }))}
+                  placeholder="Emergency contact name, phone number, and relationship..."
+                  required
+                  className="min-h-[100px] border-2 border-emerald-200 dark:border-emerald-800 focus:border-emerald-400 dark:focus:border-emerald-600 bg-white dark:bg-gray-900 resize-none"
+                />
+              </div>
+            </DialogBody>
+
+            <DialogFooter className="pt-6 gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateRecordDialogOpen(false)}
+                className="border-2 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 px-6"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={!recordFormData.child || !recordFormData.emergency}
+                className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white border-0 shadow-xl hover:shadow-2xl transition-all duration-300 px-8 disabled:opacity-50"
+              >
+                Create Medical Record
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Medical Record Timeline Dialog */}
+      <Dialog open={medicalRecordOpen} onOpenChange={setMedicalRecordOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-white to-emerald-50/30 dark:from-gray-900 dark:to-emerald-950/30">
+          <DialogHeader className="pb-6 border-b border-emerald-200 dark:border-emerald-800">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <img
+                  src="/child.jpg"
+                  alt={selectedRecord?.child}
+                  className="w-16 h-16 rounded-full border-4 border-emerald-500 dark:border-emerald-700 shadow-lg"
+                />
+                <div>
+                  <DialogTitle className="text-3xl font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 dark:from-emerald-400 dark:via-teal-400 dark:to-cyan-400 bg-clip-text text-transparent">
+                    {selectedRecord?.child}
+                  </DialogTitle>
+                  <DialogDescription className="text-base text-gray-600 dark:text-gray-400 mt-1">
+                    Complete Medical History • {selectedRecord?.notes.length || 0} Total Notes
+                  </DialogDescription>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMedicalRecordOpen(false)}
+                className="hover:bg-red-100 dark:hover:bg-red-950/50"
+              >
+              </Button>
+            </div>
+
+            {/* Medical Info Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+              <Card className="border-2 border-orange-200 dark:border-orange-800 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                    <div>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">Allergies</p>
+                      <p className="text-sm font-bold text-orange-700 dark:text-orange-400">
+                        {selectedRecord?.allergies || "None"}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-2 border-green-200 dark:border-green-800 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <Syringe className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    <div>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">Immunizations</p>
+                      <p className="text-sm font-bold text-green-700 dark:text-green-400">
+                        {selectedRecord?.immunizations}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-2 border-red-200 dark:border-red-800 bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-950/30 dark:to-pink-950/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                    <div>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">Emergency</p>
+                      <p className="text-sm font-bold text-red-700 dark:text-red-400 truncate">
+                        {selectedRecord?.emergency}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </DialogHeader>
+
+          <DialogBody className="overflow-y-auto max-h-[calc(90vh-300px)] pr-4">
+            {/* Timeline View */}
+            <div className="relative">
+              {/* Timeline Line */}
+              <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-emerald-500 via-teal-500 to-cyan-500 dark:from-emerald-700 dark:via-teal-700 dark:to-cyan-700" />
+
+              <div className="space-y-6">
+                {selectedRecord?.notes.length ? (
+                  selectedRecord.notes
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .map((note) => {
+                      const noteType = NOTE_TYPES.find((t) => t.value === note.noteType)
+                      const Icon = noteType?.icon || FileText
+
+                      return (
+                        <div key={note.id} className="relative pl-20">
+                          {/* Timeline Node */}
+                          <div className="absolute left-4 top-4 w-9 h-9 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-700 dark:to-teal-700 flex items-center justify-center border-4 border-white dark:border-gray-900 shadow-lg z-10">
+                            <Icon className="h-4 w-4 text-white" />
+                          </div>
+
+                          {/* Note Card */}
+                          <Card className={`border-2 transition-all duration-300 hover:shadow-xl ${noteType?.bgColor}`}>
+                            <CardContent className="p-6">
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                    <Badge
+                                      variant="outline"
+                                      className={`font-semibold px-3 py-1 text-base ${noteType?.bgColor}`}
+                                    >
+                                      {noteType?.label}
+                                    </Badge>
+                                    <Badge className={`text-xs ${getPriorityColor(note.priority || "medium")}`}>
+                                      {note.priority || "medium"} priority
+                                    </Badge>
+                                    <Badge className={`text-xs ${getStatusColor(note.status || "active")}`}>
+                                      {note.status || "active"}
+                                    </Badge>
+                                  </div>
+                                  <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                                    <div className="flex items-center gap-1">
+                                      <Calendar className="h-3 w-3" />
+                                      {new Date(note.date).toLocaleDateString("en-US", {
+                                        year: "numeric",
+                                        month: "long",
+                                        day: "numeric",
+                                      })}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      openEditDialog(note)
+                                    }}
+                                    className="h-9 w-9 p-0 hover:bg-blue-100 dark:hover:bg-blue-950/50 hover:scale-110 transition-all duration-200 rounded-full"
+                                  >
+                                    <Edit className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      handleDeleteNote(note)
+                                    }}
+                                    className="h-9 w-9 p-0 hover:bg-red-100 dark:hover:bg-red-950/50 hover:scale-110 transition-all duration-200 rounded-full"
+                                  >
+                                    <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                  </Button>
+                                </div>
+                              </div>
+
+                              <p className="text-base text-gray-800 dark:text-gray-200 leading-relaxed mb-4">
+                                {note.description}
+                              </p>
+
+                              {note.followUp && (
+                                <div className="mt-4 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30 border-l-4 border-amber-400 dark:border-amber-600 rounded-r-lg">
+                                  <div className="flex items-start gap-2">
+                                    <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                      <p className="text-sm font-semibold text-amber-900 dark:text-amber-300">
+                                        Follow-up Required
+                                      </p>
+                                      <p className="text-sm text-amber-800 dark:text-amber-400 mt-1">{note.followUp}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </div>
+                      )
+                    })
+                ) : (
+                  <div className="text-center py-16">
+                    <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-full mx-auto mb-6 flex items-center justify-center">
+                      <FileText className="h-12 w-12 text-gray-400 dark:text-gray-500" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      No Medical Notes Yet
+                    </h3>
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">Start building this child's medical history</p>
+                    <Button
+                      onClick={() => {
+                        if (selectedRecord) {
+                          openAddNoteDialog(selectedRecord)
+                        }
+                      }}
+                      className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add First Note
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </DialogBody>
+
+          <DialogFooter className="pt-6 gap-3 border-t border-emerald-200 dark:border-emerald-800">
+            <Button
+              onClick={() => {
+                if (selectedRecord) {
+                  openAddNoteDialog(selectedRecord)
+                }
+              }}
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg hover:shadow-xl"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Medical Note
+            </Button>
+            <Button onClick={() => setMedicalRecordOpen(false)} variant="outline">
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add/Edit Note Dialog */}
+      <Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>
+        <DialogContent className="max-w-3xl border-0 shadow-2xl bg-gradient-to-br from-white to-emerald-50/30 dark:from-gray-900 dark:to-emerald-950/30">
           <DialogHeader className="pb-6">
             <DialogTitle className="flex items-center gap-3 text-2xl">
               <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl shadow-lg">
                 <HeartPulse className="h-6 w-6 text-white" />
               </div>
-              {editingNote ? "Edit Health Note" : "Add Health Note"}
+              {editingNote ? "Edit Medical Note" : "Add Medical Note"}
             </DialogTitle>
-            <DialogDescription className="text-base text-gray-600 mt-2">
+            <DialogDescription className="text-base text-gray-600 dark:text-gray-400 mt-2">
               {editingNote
-                ? "Update the health note information with the latest details."
-                : "Record comprehensive medical information, incidents, or health observations."}
+                ? "Update the medical note information with the latest details."
+                : `Adding medical note to ${selectedRecord?.child}'s record`}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmitNote}>
             <DialogBody className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Child Selection */}
-                <div className="space-y-2">
-                  <Label htmlFor="child" className="text-base font-semibold text-gray-700">
-                    Child *
-                  </Label>
-                  <Select
-                    value={formData.childId}
-                    onValueChange={(value) => setFormData((prev) => ({ ...prev, childId: value }))}
-                  >
-                    <SelectTrigger className="h-12 border-2 border-emerald-200 focus:border-emerald-400 bg-white">
-                      {childrenOptions.find((c) => c.id === formData.childId)?.child || "Select child"}
-                    </SelectTrigger>
-                    <SelectContent>
-                      {childrenOptions.map((c) => (
-                        <SelectItem key={c.id} value={c.id} className="hover:bg-emerald-50">
-                          {c.child}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 {/* Note Type */}
                 <div className="space-y-2">
-                  <Label htmlFor="noteType" className="text-base font-semibold text-gray-700">
+                  <Label htmlFor="noteType" className="text-base font-semibold text-gray-700 dark:text-gray-300">
                     Note Type *
                   </Label>
                   <Select
-                    value={formData.noteType}
-                    onValueChange={(value) => setFormData((prev) => ({ ...prev, noteType: value }))}
+                    value={noteFormData.noteType}
+                    onValueChange={(value) => setNoteFormData((prev) => ({ ...prev, noteType: value }))}
                   >
-                    <SelectTrigger className="h-12 border-2 border-emerald-200 focus:border-emerald-400 bg-white">
-                      {formData.noteType || "Select type"}
+                    <SelectTrigger className="h-12 border-2 border-emerald-200 dark:border-emerald-800 focus:border-emerald-400 dark:focus:border-emerald-600 bg-white dark:bg-gray-900">
+                      {noteFormData.noteType || "Select type"}
                     </SelectTrigger>
                     <SelectContent>
                       {NOTE_TYPES.map((type) => (
@@ -661,40 +1165,66 @@ export default function Health() {
 
                 {/* Date */}
                 <div className="space-y-2">
-                  <Label htmlFor="date" className="text-base font-semibold text-gray-700">
+                  <Label htmlFor="date" className="text-base font-semibold text-gray-700 dark:text-gray-300">
                     Date *
                   </Label>
                   <Input
                     id="date"
                     type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, date: e.target.value }))}
+                    value={noteFormData.date}
+                    onChange={(e) => setNoteFormData((prev) => ({ ...prev, date: e.target.value }))}
                     required
-                    className="h-12 border-2 border-emerald-200 focus:border-emerald-400 bg-white"
+                    className="h-12 border-2 border-emerald-200 dark:border-emerald-800 focus:border-emerald-400 dark:focus:border-emerald-600 bg-white dark:bg-gray-900"
                   />
                 </div>
 
                 {/* Priority */}
                 <div className="space-y-2">
-                  <Label htmlFor="priority" className="text-base font-semibold text-gray-700">
+                  <Label htmlFor="priority" className="text-base font-semibold text-gray-700 dark:text-gray-300">
                     Priority
                   </Label>
                   <Select
-                    value={formData.priority}
-                    onValueChange={(value) => setFormData((prev) => ({ ...prev, priority: value as any }))}
+                    value={noteFormData.priority}
+                    onValueChange={(value) => setNoteFormData((prev) => ({ ...prev, priority: value as any }))}
                   >
-                    <SelectTrigger className="h-12 border-2 border-emerald-200 focus:border-emerald-400 bg-white">
-                      {formData.priority}
+                    <SelectTrigger className="h-12 border-2 border-emerald-200 dark:border-emerald-800 focus:border-emerald-400 dark:focus:border-emerald-600 bg-white dark:bg-gray-900">
+                      {noteFormData.priority}
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="low" className="hover:bg-green-50">
+                      <SelectItem value="low" className="hover:bg-green-50 dark:hover:bg-green-950/50">
                         🟢 Low Priority
                       </SelectItem>
-                      <SelectItem value="medium" className="hover:bg-yellow-50">
+                      <SelectItem value="medium" className="hover:bg-yellow-50 dark:hover:bg-yellow-950/50">
                         🟡 Medium Priority
                       </SelectItem>
-                      <SelectItem value="high" className="hover:bg-red-50">
+                      <SelectItem value="high" className="hover:bg-red-50 dark:hover:bg-red-950/50">
                         🔴 High Priority
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Status */}
+                <div className="space-y-2">
+                  <Label htmlFor="status" className="text-base font-semibold text-gray-700 dark:text-gray-300">
+                    Status
+                  </Label>
+                  <Select
+                    value={noteFormData.status}
+                    onValueChange={(value) => setNoteFormData((prev) => ({ ...prev, status: value as any }))}
+                  >
+                    <SelectTrigger className="h-12 border-2 border-emerald-200 dark:border-emerald-800 focus:border-emerald-400 dark:focus:border-emerald-600 bg-white dark:bg-gray-900">
+                      {noteFormData.status}
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active" className="hover:bg-blue-50 dark:hover:bg-blue-950/50">
+                        🔵 Active
+                      </SelectItem>
+                      <SelectItem value="pending" className="hover:bg-orange-50 dark:hover:bg-orange-950/50">
+                        🟠 Pending
+                      </SelectItem>
+                      <SelectItem value="resolved" className="hover:bg-green-50 dark:hover:bg-green-950/50">
+                        🟢 Resolved
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -703,59 +1233,31 @@ export default function Health() {
 
               {/* Description */}
               <div className="space-y-2">
-                <Label htmlFor="description" className="text-base font-semibold text-gray-700">
+                <Label htmlFor="description" className="text-base font-semibold text-gray-700 dark:text-gray-300">
                   Description *
                 </Label>
                 <Textarea
                   id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                  placeholder="Provide detailed information about the health note, incident, or observation..."
+                  value={noteFormData.description}
+                  onChange={(e) => setNoteFormData((prev) => ({ ...prev, description: e.target.value }))}
+                  placeholder="Provide detailed information about the medical note, incident, or observation..."
                   required
-                  className="min-h-[120px] border-2 border-emerald-200 focus:border-emerald-400 bg-white resize-none"
+                  className="min-h-[120px] border-2 border-emerald-200 dark:border-emerald-800 focus:border-emerald-400 dark:focus:border-emerald-600 bg-white dark:bg-gray-900 resize-none"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Follow-up */}
-                <div className="space-y-2">
-                  <Label htmlFor="followUp" className="text-base font-semibold text-gray-700">
-                    Follow-up Required
-                  </Label>
-                  <Input
-                    id="followUp"
-                    value={formData.followUp}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, followUp: e.target.value }))}
-                    placeholder="Specify any follow-up actions..."
-                    className="h-12 border-2 border-emerald-200 focus:border-emerald-400 bg-white"
-                  />
-                </div>
-
-                {/* Status */}
-                <div className="space-y-2">
-                  <Label htmlFor="status" className="text-base font-semibold text-gray-700">
-                    Status
-                  </Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value as any }))}
-                  >
-                    <SelectTrigger className="h-12 border-2 border-emerald-200 focus:border-emerald-400 bg-white">
-                      {formData.status}
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active" className="hover:bg-blue-50">
-                        🔵 Active
-                      </SelectItem>
-                      <SelectItem value="pending" className="hover:bg-orange-50">
-                        🟠 Pending
-                      </SelectItem>
-                      <SelectItem value="resolved" className="hover:bg-green-50">
-                        🟢 Resolved
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Follow-up */}
+              <div className="space-y-2">
+                <Label htmlFor="followUp" className="text-base font-semibold text-gray-700 dark:text-gray-300">
+                  Follow-up Required
+                </Label>
+                <Input
+                  id="followUp"
+                  value={noteFormData.followUp}
+                  onChange={(e) => setNoteFormData((prev) => ({ ...prev, followUp: e.target.value }))}
+                  placeholder="Specify any follow-up actions..."
+                  className="h-12 border-2 border-emerald-200 dark:border-emerald-800 focus:border-emerald-400 dark:focus:border-emerald-600 bg-white dark:bg-gray-900"
+                />
               </div>
             </DialogBody>
 
@@ -763,8 +1265,8 @@ export default function Health() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setDialogOpen(false)}
-                className="border-2 border-gray-300 hover:bg-gray-50 px-6"
+                onClick={() => setNoteDialogOpen(false)}
+                className="border-2 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 px-6"
               >
                 Cancel
               </Button>
@@ -779,148 +1281,20 @@ export default function Health() {
         </DialogContent>
       </Dialog>
 
-      {/* Enhanced View Notes Dialog */}
-      <Dialog open={viewNotesDialog} onOpenChange={setViewNotesDialog}>
-        <DialogContent className="max-w-5xl border-0 shadow-2xl bg-gradient-to-br from-white to-emerald-50/30">
-          <DialogHeader className="pb-6">
-            <DialogTitle className="flex items-center gap-3 text-2xl">
-              <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl shadow-lg">
-                <FileText className="h-6 w-6 text-white" />
-              </div>
-              Health Notes - {selectedChild?.child}
-            </DialogTitle>
-            <DialogDescription className="text-base text-gray-600 mt-2">
-              Complete medical history and health records for this child. Total notes:{" "}
-              {selectedChild?.notes.length || 0}
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogBody className="max-h-[70vh] overflow-y-auto">
-            <div className="space-y-4">
-              {selectedChild?.notes.length ? (
-                selectedChild.notes
-                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                  .map((note, index) => {
-                    const noteType = NOTE_TYPES.find((t) => t.value === note.noteType)
-                    return (
-                      <div
-                        key={note.id}
-                        className="border-2 border-emerald-100 rounded-2xl p-6 bg-gradient-to-br from-white to-emerald-50/50 shadow-lg hover:shadow-xl transition-all duration-300"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-3 flex-wrap">
-                              <Badge
-                                variant="outline"
-                                className={`border-emerald-300 text-emerald-700 bg-emerald-100 font-semibold px-3 py-1 ${
-                                  noteType?.bgColor
-                                }`}
-                              >
-                                {getNoteTypeIcon(note.noteType)} {note.noteType}
-                              </Badge>
-                              <Badge className={`text-xs ${getPriorityColor(note.priority || "medium")}`}>
-                                {note.priority || "medium"} priority
-                              </Badge>
-                              <Badge className={`text-xs ${getStatusColor(note.status || "active")}`}>
-                                {note.status || "active"}
-                              </Badge>
-                              <div className="flex items-center gap-1 text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                                <Calendar className="h-3 w-3" />
-                                {note.date}
-                              </div>
-                              {note.createdAt && (
-                                <div className="flex items-center gap-1 text-xs text-gray-400">
-                                  <Clock className="h-3 w-3" />
-                                  Created {new Date(note.createdAt).toLocaleDateString()}
-                                </div>
-                              )}
-                            </div>
-                            <p className="text-base mb-3 text-gray-800 leading-relaxed">{note.description}</p>
-                            {note.followUp && (
-                              <div className="text-sm text-amber-800 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl px-4 py-3">
-                                <strong className="text-amber-900">Follow-up Required:</strong> {note.followUp}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 ml-6">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                setViewNotesDialog(false)
-                                openEditDialog(note)
-                              }}
-                              className="h-10 w-10 p-0 hover:bg-blue-100 hover:scale-110 transition-all duration-200 rounded-full"
-                            >
-                              <Edit className="h-4 w-4 text-blue-600" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                setViewNotesDialog(false)
-                                handleDeleteNote(note)
-                              }}
-                              className="h-10 w-10 p-0 hover:bg-red-100 hover:scale-110 transition-all duration-200 rounded-full"
-                            >
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })
-              ) : (
-                <div className="text-center py-16">
-                  <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full mx-auto mb-6 flex items-center justify-center">
-                    <FileText className="h-12 w-12 text-gray-400" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-700 mb-2">No Health Notes Yet</h3>
-                  <p className="text-gray-500 mb-4">No health notes have been recorded for this child.</p>
-                  <Button
-                    onClick={() => {
-                      setViewNotesDialog(false)
-                      openAddDialog(selectedChild)
-                    }}
-                    className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add First Note
-                  </Button>
-                </div>
-              )}
-            </div>
-          </DialogBody>
-
-          <DialogFooter className="pt-6 gap-3">
-            <Button
-              onClick={() => openAddDialog(selectedChild)}
-              className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add New Note
-            </Button>
-            <Button onClick={() => setViewNotesDialog(false)} variant="outline">
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Enhanced Delete Confirmation */}
+      {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="border-0 shadow-2xl bg-gradient-to-br from-white to-red-50/30">
+        <AlertDialogContent className="border-0 shadow-2xl bg-gradient-to-br from-white to-red-50/30 dark:from-gray-900 dark:to-red-950/30">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-3 text-xl text-red-700">
+            <AlertDialogTitle className="flex items-center gap-3 text-xl text-red-700 dark:text-red-400">
               <div className="p-2 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl shadow-lg">
                 <Trash2 className="h-5 w-5 text-white" />
               </div>
-              Delete Health Note
+              Delete Medical Note
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-base text-gray-600 mt-2">
-              Are you sure you want to permanently delete this health note? This action cannot be undone and will remove
-              all associated medical information.
-              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <AlertDialogDescription className="text-base text-gray-600 dark:text-gray-400 mt-2">
+              Are you sure you want to permanently delete this medical note? This action cannot be undone and will
+              remove all associated medical information.
+              <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
                 <strong>Note Type:</strong> {noteToDelete?.noteType}
                 <br />
                 <strong>Date:</strong> {noteToDelete?.date}
@@ -928,7 +1302,9 @@ export default function Health() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-3">
-            <AlertDialogCancel className="border-2 border-gray-300 hover:bg-gray-50">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="border-2 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-300"

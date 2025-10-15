@@ -1,5 +1,5 @@
 interface QueryIntent {
-  entity: "children" | "attendance" | "billing" | "health" | "media" | "report" | "shift" | "booking" | "event" | "album" | "staff"
+  entity: "children" | "attendance" | "billing" | "health" | "media" | "report" | "shift" | "booking" | "event" | "album" | "staff" | "user"
   type: "list" | "analyze" | "generate"
   filters?: Record<string, any>
   timeframe?: string
@@ -198,6 +198,26 @@ const api = {
       }
     },
   },
+  user: {
+    getAll: async () => {
+      console.log("Fetching from:", `${API_BASE_URL}/users`)
+      try {
+        const response = await fetch(`${API_BASE_URL}/users`)
+        console.log("User API response status:", response.status)
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error("User API error:", errorText)
+          throw new Error(`Failed to fetch user: ${response.statusText}`)
+        }
+        const data = await response.json()
+        console.log("User data received:", data)
+        return data
+      } catch (error) {
+        console.error("User API fetch error:", error)
+        throw error
+      }
+    },
+  },
 }
 
 class DataIntegrationService {
@@ -228,6 +248,8 @@ class DataIntegrationService {
           return await this.fetchBookingData(type, filters, timeframe)
         case "staff":
           return await this.fetchStaffData(type, filters, timeframe)
+        case "user":
+          return await this.fetchUserData(type, filters, timeframe)
         default:
           throw new Error(`Unsupported entity: ${entity}`)
       }
@@ -241,7 +263,7 @@ class DataIntegrationService {
     console.log("Starting comprehensive report data fetch...")
 
     try {
-      const [children, attendance, billing, staff, health, shift, event, booking] = await Promise.all([
+      const [children, attendance, billing, staff, health, shift, event, booking, user] = await Promise.all([
         api.children.getAll(),
         api.attendance.getAll(),
         api.billing.getAll(),
@@ -251,6 +273,7 @@ class DataIntegrationService {
         api.media.getAll(),
         api.booking.getAll(),
         api.staff.getAll(),
+        api.user.getAll(),
 
 
       ])
@@ -427,6 +450,19 @@ class DataIntegrationService {
       data: allBookings,
       count: allBookings.length,
       metadata: { source: "booking-api", timestamp: new Date().toISOString() },
+    }
+  }
+  private async fetchUserData(type: string, filters?: Record<string, any>, timeframe?: string): Promise<DataResult> {
+    const allUsers = await api.user.getAll()
+    if (type === "analyze") {
+      const active = allUsers.filter((u: any) => u.status === "active").length
+      const data = { total: allUsers.length, active }
+      return { data, metadata: { source: "user-api", timestamp: new Date().toISOString() } }
+    }
+    return {
+      data: allUsers,
+      count: allUsers.length,
+      metadata: { source: "user-api", timestamp: new Date().toISOString() },
     }
   }
 

@@ -25,9 +25,9 @@ import {
   DoorOpen,
   CalendarCheck2,
   Baby,
-  MessageCircle,
-  Bot,
   BotIcon,
+  Moon,
+  Sun,
 } from "lucide-react"
 import { Button } from "./ui/button"
 import { Card } from "./ui/card"
@@ -35,15 +35,16 @@ import { Input } from "./ui/input"
 import { Badge } from "./ui/badge"
 import { useRBAC } from "../contexts/rbac"
 import { useBranding } from "../contexts/branding"
+import { useTheme } from "../contexts/theme"
 import { getAccentTheme } from "./theme-utils"
 import { cn } from "../lib/utils"
 
 export function AuroraBG() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full blur-3xl opacity-30 bg-gradient-to-br from-emerald-400 to-lime-300" />
-      <div className="absolute -bottom-24 -left-24 h-80 w-80 rounded-full blur-3xl opacity-30 bg-gradient-to-br from-rose-300 to-pink-300" />
-      <div className="absolute inset-0 [background-image:radial-gradient(hsl(0_0%_0%/.06)_1px,transparent_1px)] [background-size:18px_18px]" />
+      <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full blur-3xl opacity-30 dark:opacity-20 bg-gradient-to-br from-emerald-400 to-lime-300 dark:from-emerald-500 dark:to-lime-400" />
+      <div className="absolute -bottom-24 -left-24 h-80 w-80 rounded-full blur-3xl opacity-30 dark:opacity-20 bg-gradient-to-br from-rose-300 to-pink-300 dark:from-rose-400 dark:to-pink-400" />
+      <div className="absolute inset-0 [background-image:radial-gradient(hsl(0_0%_0%/.06)_1px,transparent_1px)] dark:[background-image:radial-gradient(hsl(0_0%_100%/.06)_1px,transparent_1px)] [background-size:18px_18px]" />
     </div>
   )
 }
@@ -56,8 +57,8 @@ export function Section({
   return (
     <section className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold">{title}</h2>
-        {description ? <p className="text-sm text-neutral-500">{description}</p> : null}
+        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+        {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
       </div>
       <div className="relative group">
         <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-br from-foreground/10 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
@@ -77,7 +78,13 @@ function useCollapsedSidebar() {
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: Home, permission: "view:dashboard", section: "Overview" },
-  { label: "Parent Portal", href: "/parent-portal", icon: DoorOpen, permission: "view:parent-portal", section: "Overview" },
+  {
+    label: "Parent Portal",
+    href: "/parent-portal",
+    icon: DoorOpen,
+    permission: "view:parent-portal",
+    section: "Overview",
+  },
 
   {
     label: "Attendance",
@@ -101,12 +108,17 @@ const NAV_ITEMS = [
   { label: "Reports", href: "/reports", icon: FileText, permission: "view:reports", section: "Insights" },
   { label: "Calendar", href: "/calendar", icon: CalendarDays, permission: "manage:calendar", section: "Insights" },
   { label: "Bookings", href: "/booking", icon: Plus, permission: "manage:bookings", section: "Insights" },
-  { label: "AI Assistant", href: "/ai-assistant", icon: Sparkles, permission: "view:ai-assistant", section: "Insights" },
-  { label: "User Management", href: "/user-management", icon: UserCog, permission: "manage:users", section: "System"},
-  { label: "Staff", href: "/staff", icon: Users, permission: "manage:settings", section: "System" },
+  {
+    label: "AI Assistant",
+    href: "/ai-assistant",
+    icon: Sparkles,
+    permission: "view:ai-assistant",
+    section: "Insights",
+  },
+  { label: "User Management", href: "/user-management", icon: UserCog, permission: "manage:users", section: "System" },
+  { label: "Staff Management", href: "/staff", icon: Users, permission: "manage:settings", section: "System" },
   { label: "Chat Assistant", href: "/chat", icon: BotIcon, permission: "manage:settings", section: "System" },
   { label: "Settings", href: "/settings", icon: Settings, permission: "manage:settings", section: "System" },
-
 ]
 
 function BrandHeader({ collapsed }: { collapsed: boolean }) {
@@ -116,22 +128,18 @@ function BrandHeader({ collapsed }: { collapsed: boolean }) {
     <div className="relative p-3">
       <div className="relative rounded-xl p-[1px] overflow-hidden">
         <div className={cn("absolute inset-0 bg-gradient-to-r opacity-80", theme.gradFrom, theme.gradTo)} />
-        <div className="relative rounded-[11px] bg-white/70 backdrop-blur border">
+        <div className="relative rounded-[11px] bg-white/70 dark:bg-neutral-900/70 backdrop-blur border border-border">
           <div className={cn("relative flex items-center gap-3 h-14 px-3", collapsed && "justify-center")}>
             <div className="relative">
-              <img
-                src="/login-image.png"
-                width={70}
-                height={70}
-                alt="Brand logo"
-                className="rounded-lg"
-              />
+              <img src="/login-image.png" width={70} height={70} alt="Brand logo" className="rounded-lg" />
               <div className="absolute -top-0.5 -right-1 w-3 h-3 bg-emerald-400 rounded-full animate-ping" />
             </div>
             {!collapsed && (
               <div className="flex flex-col">
-                <div className="font-semibold leading-5">SalamNest</div>
-                <div className="text-[10px] text-neutral-500">More Than Care, <br />A Place to Grow</div>
+                <div className="font-semibold leading-5 text-foreground">SalamNest</div>
+                <div className="text-[10px] text-muted-foreground">
+                  More Than Care, <br />A Place to Grow
+                </div>
               </div>
             )}
           </div>
@@ -157,7 +165,12 @@ function DesktopSidebar() {
   const SidebarWidth = collapsed ? "w-16" : "w-64"
 
   return (
-    <aside className={cn("hidden md:flex shrink-0 border-r bg-white/60 backdrop-blur transition-all", SidebarWidth)}>
+    <aside
+      className={cn(
+        "hidden md:flex shrink-0 border-r border-border bg-white/60 dark:bg-neutral-950/60 backdrop-blur transition-all",
+        SidebarWidth,
+      )}
+    >
       <div className="relative flex h-full w-full flex-col">
         <div className="absolute inset-0 opacity-20 pointer-events-none" />
         <BrandHeader collapsed={collapsed} />
@@ -165,7 +178,7 @@ function DesktopSidebar() {
           {grouped.map(({ sec, items }) => (
             <div key={sec as string}>
               {!collapsed && (
-                <div className="px-3 mt-3 mb-1 text-[10px] font-medium tracking-wide text-neutral-500 uppercase">
+                <div className="px-3 mt-3 mb-1 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
                   {sec}
                 </div>
               )}
@@ -178,8 +191,8 @@ function DesktopSidebar() {
                       <Link
                         to={item.href}
                         className={cn(
-                          "relative group flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all border bg-white/50 backdrop-blur",
-                          active ? theme.navActive : "hover:bg-neutral-100",
+                          "relative group flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all border border-border bg-white/50 dark:bg-neutral-900/50 backdrop-blur",
+                          active ? theme.navActive : "hover:bg-neutral-100 dark:hover:bg-neutral-800",
                           active ? theme.neonRing : "",
                           active ? theme.neonShadow : "",
                           theme.hoverGlow,
@@ -188,10 +201,10 @@ function DesktopSidebar() {
                         aria-current={active ? "page" : undefined}
                       >
                         {active && (
-                          <span className="absolute left-1 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-full bg-neutral-800/70" />
+                          <span className="absolute left-1 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-full bg-neutral-800/70 dark:bg-neutral-200/70" />
                         )}
-                        <Icon className="h-4 w-4" />
-                        {!collapsed && <span className="truncate">{item.label}</span>}
+                        <Icon className="h-4 w-4 text-foreground" />
+                        {!collapsed && <span className="truncate text-foreground">{item.label}</span>}
                         {!collapsed && item.label === "Messages" && (
                           <Badge className="ml-auto" variant="secondary">
                             3
@@ -208,7 +221,7 @@ function DesktopSidebar() {
             </div>
           ))}
         </nav>
-        <div className="relative z-10 p-3 border-t">
+        <div className="relative z-10 p-3 border-t border-border">
           <div className={cn("flex items-center gap-2", collapsed && "justify-center")}>
             <Button
               variant="outline"
@@ -230,6 +243,7 @@ function Header({ title }: { title?: string }) {
   const navigate = useNavigate()
   const { role, setRole } = useRBAC()
   const { accent } = useBranding()
+  const { theme: currentTheme, toggleTheme } = useTheme()
   const theme = getAccentTheme(accent)
   const [q, setQ] = React.useState("")
 
@@ -237,8 +251,8 @@ function Header({ title }: { title?: string }) {
     <button
       onClick={() => setRole(r)}
       className={cn(
-        "px-2 py-1 text-xs rounded border hover:bg-neutral-100",
-        role === r && "ring-2 ring-offset-2 " + theme.ring,
+        "px-2 py-1 text-xs rounded border border-border hover:bg-neutral-100 dark:hover:bg-neutral-800 text-foreground",
+        role === r && "ring-2 ring-offset-2 ring-offset-background " + theme.ring,
       )}
     >
       {label}
@@ -246,12 +260,12 @@ function Header({ title }: { title?: string }) {
   )
 
   return (
-    <header className="relative flex h-16 items-center gap-2 border-b px-4">
+    <header className="relative flex h-16 items-center gap-2 border-b border-border px-4">
       <AuroraBG />
-      <div className="relative z-10 font-semibold text-base md:text-lg">{title || "Overview"}</div>
+      <div className="relative z-10 font-semibold text-base md:text-lg text-foreground">{title || "Overview"}</div>
       <div className="ml-auto relative z-10 flex items-center gap-2">
         <div className="relative hidden md:block">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-neutral-400" />
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -260,18 +274,26 @@ function Header({ title }: { title?: string }) {
             aria-label="Global search"
           />
         </div>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleTheme}
+          aria-label={currentTheme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+        >
+          {currentTheme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+        </Button>
+
         <Button variant="ghost" size="icon" className="relative">
-  <Bell className="h-5 w-5" />
-  <span className="sr-only">Notifications</span>
-</Button>
+          <Bell className="h-5 w-5" />
+          <span className="sr-only">Notifications</span>
+        </Button>
 
-
-
-<div className="hidden lg:flex items-center gap-2 ml-2">
-  <RoleButton r="admin" label="Admin" />
-  <RoleButton r="staff" label="Staff" />
-  <RoleButton r="parent" label="Parent" />
-</div>
+        <div className="hidden lg:flex items-center gap-2 ml-2">
+          <RoleButton r="admin" label="Admin" />
+          <RoleButton r="staff" label="Staff" />
+          <RoleButton r="parent" label="Parent" />
+        </div>
 
         <Button
           variant="outline"
@@ -283,7 +305,6 @@ function Header({ title }: { title?: string }) {
           <CircleUserRound className="h-5 w-5" />
           Sign out
         </Button>
-
       </div>
     </header>
   )
@@ -291,7 +312,7 @@ function Header({ title }: { title?: string }) {
 
 export function AppShell({ children, title }: { children: React.ReactNode; title?: string }) {
   return (
-    <div className="relative flex min-h-screen w-full overflow-hidden">
+    <div className="relative flex min-h-screen w-full overflow-hidden bg-background">
       <AuroraBG />
       <DesktopSidebar />
       <main className="relative z-10 flex-1 flex flex-col">

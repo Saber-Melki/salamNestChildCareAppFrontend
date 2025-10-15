@@ -366,21 +366,7 @@ function LoginScreen() {
                       )}
                     </div>
                   </Button>
-                </form>
-
-                {/* Footer */}
-                <div className="mt-6 text-center">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    By signing in, you agree to our{" "}
-                    <a href="#" className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 underline font-medium">
-                      Terms of Service
-                    </a>{" "}
-                    and{" "}
-                    <a href="#" className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 underline font-medium">
-                      Privacy Policy
-                    </a>
-                  </p>
-                </div>
+                </form>                
               </div>
             </div>
 
@@ -388,7 +374,7 @@ function LoginScreen() {
             <div className="mt-8 text-center">
               <p className="text-sm text-gray-600 dark:text-gray-300">
                 Need help getting started?{" "}
-                <a href="#" className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium underline">
+                <a href="https://colonybyte.com/en/contact" className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium underline">
                   Contact our support team
                 </a>
               </p>

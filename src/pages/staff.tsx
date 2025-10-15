@@ -163,12 +163,10 @@ export default function Staff() {
   return (
     <AppShell title="Staff Management">
       <div className="space-y-6">
-        {/* Hero Section */}
-        <div className="relative overflow-hidden rounded-3xl border shadow-2xl">
+        {/* <div className="relative overflow-hidden rounded-3xl border shadow-2xl">
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 opacity-95" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
 
-          {/* Floating decorative elements */}
           <div className="absolute top-6 right-8 w-32 h-32 bg-white/10 rounded-full blur-3xl animate-pulse" />
           <div className="absolute bottom-8 left-8 w-24 h-24 bg-white/5 rounded-full blur-2xl animate-bounce" />
           <div className="absolute top-1/3 right-1/4 w-20 h-20 bg-white/10 rounded-full blur-xl animate-pulse delay-1000" />
@@ -202,7 +200,7 @@ export default function Staff() {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

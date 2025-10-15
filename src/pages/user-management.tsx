@@ -8,7 +8,6 @@ import { Label } from "../components/ui/label"
 import { Badge } from "../components/ui/badge"
 import { Card } from "../components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table"
-import { Textarea } from "../components/ui/textarea"
 import {
   Dialog,
   DialogContent,
@@ -21,7 +20,7 @@ import {
 } from "../components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
 import { useRBAC } from "../contexts/rbac"
-import { cn } from "../lib/utils" // Assuming 'cn' correctly handles conditional classes including RTL adjustments if needed
+import { cn } from "../lib/utils"
 import {
   Plus,
   Search,
@@ -29,140 +28,42 @@ import {
   Trash2,
   Phone,
   Mail,
-  MapPin,
-  Clock,
   Shield,
-  AlertTriangle,
   Users,
-  UserCheck,
-  UserX,
   Filter,
   Download,
   Upload,
   Eye,
-  Building,
   Baby,
   GraduationCap,
   Settings,
-  Key,
-  Lock,
-  Unlock,
-  User,
+  Loader2,
+  RefreshCw,
+  CheckCircle2,
+  UserCircle,
+  Save,
 } from "lucide-react"
 
-interface UserManagementUser {
-  id: string
-  firstName: string
-  lastName: string
+interface User {
+  id?: string
+  first_name: string
+  last_name: string
   email: string
-  phone: string
+  password?: string
   role: "admin" | "staff" | "parent"
-  status: "active" | "inactive" | "pending" | "suspended"
-  createdDate: string
-  lastLogin?: string
-  address: string
-  emergencyContact?: {
-    name: string
-    phone: string
-    relationship: string
-  }
-  children?: string[] // For parents - child IDs
-  department?: string // For staff
-  permissions?: string[]
-  notes: string
-  avatar?: string
-  isVerified: boolean
-  loginAttempts: number
+  url_img: string
+  phone: string
 }
 
-const INITIAL_USERS: UserManagementUser[] = [
-  {
-    id: "1",
-    firstName: "Sarah",
-    lastName: "Johnson",
-    email: "sarah.johnson@childcare.com",
-    phone: "(555) 123-4567",
-    role: "admin",
-    status: "active",
-    createdDate: "2020-01-15",
-    lastLogin: "2024-01-15T10:30:00Z",
-    address: "123 Main St, City, State 12345",
-    department: "Administration",
-    permissions: ["all"],
-    notes: "System administrator with full access",
-    avatar: "/placeholder.svg?height=40&width=40&text=SJ",
-    isVerified: true,
-    loginAttempts: 0,
-  },
-  {
-    id: "2",
-    firstName: "Emily",
-    lastName: "Davis",
-    email: "emily.davis@childcare.com",
-    phone: "(555) 234-5678",
-    role: "staff",
-    status: "active",
-    createdDate: "2021-08-20",
-    lastLogin: "2024-01-14T15:45:00Z",
-    address: "456 Oak Ave, City, State 12345",
-    department: "Toddler Room",
-    permissions: ["manage:children", "manage:attendance", "view:reports"],
-    notes: "Lead teacher for toddler group",
-    avatar: "/placeholder.svg?height=40&width=40&text=ED",
-    isVerified: true,
-    loginAttempts: 0,
-  },
-  {
-    id: "3",
-    firstName: "Michael",
-    lastName: "Brown",
-    email: "michael.brown@parent.com",
-    phone: "(555) 345-6789",
-    role: "parent",
-    status: "active",
-    createdDate: "2022-03-10",
-    lastLogin: "2024-01-13T08:20:00Z",
-    address: "789 Pine St, City, State 12345",
-    emergencyContact: {
-      name: "Lisa Brown",
-      phone: "(555) 765-4321",
-      relationship: "Spouse",
-    },
-    children: ["child-1", "child-2"],
-    notes: "Parent of Emma and Jake Brown",
-    avatar: "/placeholder.svg?height=40&width=40&text=MB",
-    isVerified: true,
-    loginAttempts: 0,
-  },
-  {
-    id: "4",
-    firstName: "Jessica",
-    lastName: "Wilson",
-    email: "jessica.wilson@parent.com",
-    phone: "(555) 456-7890",
-    role: "parent",
-    status: "pending",
-    createdDate: "2024-01-10",
-    address: "321 Elm St, City, State 12345",
-    children: ["child-3"],
-    notes: "New parent - account pending verification",
-    avatar: "/placeholder.svg?height=40&width=40&text=JW",
-    isVerified: false,
-    loginAttempts: 0,
-  },
-]
+const API_URL = "http://localhost:8080/users"
 
 const ROLE_COLORS = {
-  admin: "bg-red-100 text-red-800",
-  staff: "bg-blue-100 text-blue-800",
-  parent: "bg-green-100 text-green-800",
-}
-
-const STATUS_COLORS = {
-  active: "bg-green-100 text-green-800",
-  inactive: "bg-gray-100 text-gray-800",
-  pending: "bg-yellow-100 text-yellow-800",
-  suspended: "bg-red-100 text-red-800",
+  admin:
+    "bg-gradient-to-r from-purple-500/10 to-violet-500/10 text-purple-700 border-purple-200/50 dark:from-purple-500/20 dark:to-violet-500/20 dark:text-purple-300 dark:border-purple-700/50",
+  staff:
+    "bg-gradient-to-r from-blue-500/10 to-cyan-500/10 text-blue-700 border-blue-200/50 dark:from-blue-500/20 dark:to-cyan-500/20 dark:text-blue-300 dark:border-blue-700/50",
+  parent:
+    "bg-gradient-to-r from-emerald-500/10 to-green-500/10 text-emerald-700 border-emerald-200/50 dark:from-emerald-500/20 dark:to-green-500/20 dark:text-emerald-300 dark:border-emerald-700/50",
 }
 
 const ROLE_ICONS = {
@@ -171,249 +72,206 @@ const ROLE_ICONS = {
   parent: Baby,
 }
 
-function AddUserDialog() {
+function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
   const [open, setOpen] = React.useState(false)
-  const [formData, setFormData] = React.useState<{
-    firstName: string
-    lastName: string
-    email: string
-    phone: string
-    role: "admin" | "staff" | "parent" | ""
-    address: string
-    department: string
-    emergencyContactName: string
-    emergencyContactPhone: string
-    emergencyContactRelationship: string
-    notes: string
-    sendWelcomeEmail: boolean
-  }>({
-    firstName: "",
-    lastName: "",
+  const [loading, setLoading] = React.useState(false)
+  const [formData, setFormData] = React.useState<User>({
+    first_name: "",
+    last_name: "",
     email: "",
+    password: "",
+    role: "parent",
+    url_img: "",
     phone: "",
-    role: "",
-    address: "",
-    department: "",
-    emergencyContactName: "",
-    emergencyContactPhone: "",
-    emergencyContactRelationship: "",
-    notes: "",
-    sendWelcomeEmail: true,
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Adding user:", formData)
-    setOpen(false)
-    setFormData({
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
-      role: "",
-      address: "",
-      department: "",
-      emergencyContactName: "",
-      emergencyContactPhone: "",
-      emergencyContactRelationship: "",
-      notes: "",
-      sendWelcomeEmail: true,
-    })
+    setLoading(true)
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      })
+      if (response.ok) {
+        setOpen(false)
+        onUserAdded()
+        setFormData({
+          first_name: "",
+          last_name: "",
+          email: "",
+          password: "",
+          role: "parent",
+          url_img: "",
+          phone: "",
+        })
+      }
+    } catch (error) {
+      console.error("Error adding user:", error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2"> {/* Removed flex-row-reverse from here, as Plus should be on the left */}
+        <Button className="gap-2 shadow-lg bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-700 text-white border-0">
           <Plus className="h-4 w-4" />
           Add New User
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Add New User</DialogTitle>
-          <DialogDescription>Create a new user account for admin, staff, or parent.</DialogDescription>
+          <DialogTitle className="text-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+            Add New User
+          </DialogTitle>
+          <DialogDescription>Create a new user account for your childcare center.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <DialogBody className="space-y-6">
             {/* Personal Information */}
             <div className="space-y-4">
-              <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Personal Information</h3>
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                <div className="h-1 w-1 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600" />
+                Personal Information
+              </h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name *</Label>
+                  <Label htmlFor="first_name">First Name *</Label>
                   <Input
-                    id="firstName"
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    id="first_name"
+                    value={formData.first_name}
+                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                     required
+                    placeholder="First Name"
+                    className="transition-all focus:ring-2 focus:ring-purple-500/20"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Label htmlFor="last_name">Last Name *</Label>
                   <Input
-                    id="lastName"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    id="last_name"
+                    value={formData.last_name}
+                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                     required
+                    placeholder="Last Name"
+                    className="transition-all focus:ring-2 focus:ring-purple-500/20"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone *</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                  placeholder="username@salamnest.com"
+                  className="transition-all focus:ring-2 focus:ring-purple-500/20"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone *</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  required
+                  placeholder="+21612345678"
+                  className="transition-all focus:ring-2 focus:ring-purple-500/20"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password *</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                  placeholder="strongPassword123"
+                  className="transition-all focus:ring-2 focus:ring-purple-500/20"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="url_img">Profile Image URL</Label>
+                <Input
+                  id="url_img"
+                  value={formData.url_img}
+                  onChange={(e) => setFormData({ ...formData, url_img: e.target.value })}
+                  placeholder="https://example.com/avatar.jpg"
+                  className="transition-all focus:ring-2 focus:ring-purple-500/20"
                 />
               </div>
             </div>
 
-            {/* Role & Access */}
+            {/* Role */}
             <div className="space-y-4">
-              <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Role & Access</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role *</Label>
-                  <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as "admin" | "staff" | "parent" })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">
-                        {/* Adjusted to keep icon on left for LTR display */}
-                        <div className="flex items-center gap-2"> 
-                          <Settings className="h-4 w-4" />
-                          Administrator
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="staff">
-                        {/* Adjusted to keep icon on left for LTR display */}
-                        <div className="flex items-center gap-2"> 
-                          <GraduationCap className="h-4 w-4" />
-                          Staff Member
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="parent">
-                        {/* Adjusted to keep icon on left for LTR display */}
-                        <div className="flex items-center gap-2"> 
-                          <Baby className="h-4 w-4" />
-                          Parent/Guardian
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {formData.role === "staff" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="department">Department</Label>
-                    <Select
-                      value={formData.department}
-                      onValueChange={(value) => setFormData({ ...formData, department: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select department" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="administration">Administration</SelectItem>
-                        <SelectItem value="infant-room">Infant Room</SelectItem>
-                        <SelectItem value="toddler-room">Toddler Room</SelectItem>
-                        <SelectItem value="preschool">Preschool</SelectItem>
-                        <SelectItem value="kitchen">Kitchen</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Emergency Contact (for parents) */}
-            {formData.role === "parent" && (
-              <div className="space-y-4">
-                <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Emergency Contact</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="emergencyContactName">Contact Name</Label>
-                    <Input
-                      id="emergencyContactName"
-                      value={formData.emergencyContactName}
-                      onChange={(e) => setFormData({ ...formData, emergencyContactName: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="emergencyContactPhone">Contact Phone</Label>
-                    <Input
-                      id="emergencyContactPhone"
-                      value={formData.emergencyContactPhone}
-                      onChange={(e) => setFormData({ ...formData, emergencyContactPhone: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="emergencyContactRelationship">Relationship</Label>
-                  <Input
-                    id="emergencyContactRelationship"
-                    value={formData.emergencyContactRelationship}
-                    onChange={(e) => setFormData({ ...formData, emergencyContactRelationship: e.target.value })}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Notes */}
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Additional notes about the user..."
-              />
-            </div>
-
-            {/* Options */}
-            <div className="space-y-4">
-              <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Options</h3>
-              {/* Removed flex-row-reverse, checkbox should be on the left for LTR */}
-              <div className="flex items-center gap-2"> 
-                <input
-                  type="checkbox"
-                  id="sendWelcomeEmail"
-                  checked={formData.sendWelcomeEmail}
-                  onChange={(e) => setFormData({ ...formData, sendWelcomeEmail: e.target.checked })}
-                  className="rounded"
-                />
-                <Label htmlFor="sendWelcomeEmail">Send welcome email with login instructions</Label>
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                <div className="h-1 w-1 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600" />
+                Role
+              </h3>
+              <div className="space-y-2">
+                <Label htmlFor="role">User Role *</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value) => setFormData({ ...formData, role: value as "admin" | "staff" | "parent" })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">
+                      <div className="flex items-center gap-2">
+                        <Settings className="h-4 w-4" />
+                        Administrator
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="staff">
+                      <div className="flex items-center gap-2">
+                        <GraduationCap className="h-4 w-4" />
+                        Staff Member
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="parent">
+                      <div className="flex items-center gap-2">
+                        <Baby className="h-4 w-4" />
+                        Parent/Guardian
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </DialogBody>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit">Create User</Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="shadow-lg bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-700 text-white border-0"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Create User
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -421,206 +279,176 @@ function AddUserDialog() {
   )
 }
 
-function EditUserDialog({ user }: { user: UserManagementUser }) {
+function EditUserDialog({ user, onUserUpdated }: { user: User; onUserUpdated: () => void }) {
   const [open, setOpen] = React.useState(false)
-  const [formData, setFormData] = React.useState({
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    phone: user.phone,
-    role: user.role,
-    status: user.status,
-    address: user.address,
-    department: user.department || "",
-    emergencyContactName: user.emergencyContact?.name || "",
-    emergencyContactPhone: user.emergencyContact?.phone || "",
-    emergencyContactRelationship: user.emergencyContact?.relationship || "",
-    notes: user.notes,
-  })
+  const [loading, setLoading] = React.useState(false)
+  const [formData, setFormData] = React.useState<User>(user)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Updating user:", formData)
-    setOpen(false)
+    setLoading(true)
+    try {
+const response = await fetch(`${API_URL}/${Number(user.id)}`, {
+  method: "PUT",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(formData),
+})
+      if (response.ok) {
+        setOpen(false)
+        onUserUpdated()
+      }
+    } catch (error) {
+      console.error("Error updating user:", error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-cyan-500/10 transition-all"
+        >
           <Edit className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Edit User</DialogTitle>
+          <DialogTitle className="text-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+            Edit User
+          </DialogTitle>
           <DialogDescription>
-            Update the details for {user.firstName} {user.lastName}.
+            Update information for {user.first_name} {user.last_name}.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <DialogBody className="space-y-6">
             {/* Personal Information */}
             <div className="space-y-4">
-              <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Personal Information</h3>
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                <div className="h-1 w-1 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600" />
+                Personal Information
+              </h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-firstName">First Name *</Label>
+                  <Label htmlFor="edit_first_name">First Name *</Label>
                   <Input
-                    id="edit-firstName"
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    id="edit_first_name"
+                    value={formData.first_name}
+                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                     required
+                    className="transition-all focus:ring-2 focus:ring-purple-500/20"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-lastName">Last Name *</Label>
+                  <Label htmlFor="edit_last_name">Last Name *</Label>
                   <Input
-                    id="edit-lastName"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    id="edit_last_name"
+                    value={formData.last_name}
+                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                     required
+                    className="transition-all focus:ring-2 focus:ring-purple-500/20"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-email">Email *</Label>
-                  <Input
-                    id="edit-email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-phone">Phone *</Label>
-                  <Input
-                    id="edit-phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="edit-address">Address</Label>
+                <Label htmlFor="edit_email">Email *</Label>
                 <Input
-                  id="edit-address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  id="edit_email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                  className="transition-all focus:ring-2 focus:ring-purple-500/20"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit_phone">Phone *</Label>
+                <Input
+                  id="edit_phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  required
+                  className="transition-all focus:ring-2 focus:ring-purple-500/20"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit_url_img">Profile Image URL</Label>
+                <Input
+                  id="edit_url_img"
+                  value={formData.url_img}
+                  onChange={(e) => setFormData({ ...formData, url_img: e.target.value })}
+                  className="transition-all focus:ring-2 focus:ring-purple-500/20"
                 />
               </div>
             </div>
 
-            {/* Role & Status */}
+            {/* Role */}
             <div className="space-y-4">
-              <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Role & Status</h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-role">Role *</Label>
-                  <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as "admin" | "staff" | "parent" })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Administrator</SelectItem>
-                      <SelectItem value="staff">Staff Member</SelectItem>
-                      <SelectItem value="parent">Parent/Guardian</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-status">Status *</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) => setFormData({ ...formData, status: value as "active" | "inactive" | "pending" | "suspended" })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="suspended">Suspended</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {formData.role === "staff" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-department">Department</Label>
-                    <Select
-                      value={formData.department}
-                      onValueChange={(value) => setFormData({ ...formData, department: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="administration">Administration</SelectItem>
-                        <SelectItem value="infant-room">Infant Room</SelectItem>
-                        <SelectItem value="toddler-room">Toddler Room</SelectItem>
-                        <SelectItem value="preschool">Preschool</SelectItem>
-                        <SelectItem value="kitchen">Kitchen</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                <div className="h-1 w-1 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600" />
+                Role
+              </h3>
+              <div className="space-y-2">
+                <Label htmlFor="edit_role">User Role *</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value) => setFormData({ ...formData, role: value as "admin" | "staff" | "parent" })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">
+                      <div className="flex items-center gap-2">
+                        <Settings className="h-4 w-4" />
+                        Administrator
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="staff">
+                      <div className="flex items-center gap-2">
+                        <GraduationCap className="h-4 w-4" />
+                        Staff Member
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="parent">
+                      <div className="flex items-center gap-2">
+                        <Baby className="h-4 w-4" />
+                        Parent/Guardian
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-
-            {/* Emergency Contact (for parents) */}
-            {formData.role === "parent" && (
-              <div className="space-y-4">
-                <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Emergency Contact</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-emergencyContactName">Contact Name</Label>
-                    <Input
-                      id="edit-emergencyContactName"
-                      value={formData.emergencyContactName}
-                      onChange={(e) => setFormData({ ...formData, emergencyContactName: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-emergencyContactPhone">Contact Phone</Label>
-                    <Input
-                      id="edit-emergencyContactPhone"
-                      value={formData.emergencyContactPhone}
-                      onChange={(e) => setFormData({ ...formData, emergencyContactPhone: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-emergencyContactRelationship">Relationship</Label>
-                  <Input
-                    id="edit-emergencyContactRelationship"
-                    value={formData.emergencyContactRelationship}
-                    onChange={(e) => setFormData({ ...formData, emergencyContactRelationship: e.target.value })}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Notes */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-notes">Notes</Label>
-              <Textarea
-                id="edit-notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Additional notes about the user..."
-              />
             </div>
           </DialogBody>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit">Update User</Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="shadow-lg bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-700 text-white border-0"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Update User
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -628,245 +456,185 @@ function EditUserDialog({ user }: { user: UserManagementUser }) {
   )
 }
 
-function UserDetailsDialog({ user }: { user: UserManagementUser }) {
+function UserDetailsDialog({ user }: { user: User }) {
   const [open, setOpen] = React.useState(false)
   const RoleIcon = ROLE_ICONS[user.role]
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hover:bg-gradient-to-r hover:from-violet-500/10 hover:to-fuchsia-500/10 transition-all"
+        >
           <Eye className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3"> {/* Removed flex-row-reverse */}
-            <img
-              src={user.avatar || "/placeholder.svg?height=40&width=40&text=" + user.firstName[0] + user.lastName[0]}
-              alt={`${user.firstName} ${user.lastName}`}
-              className="h-10 w-10 rounded-full"
-            />
-            {user.firstName} {user.lastName}
-            {!user.isVerified && <AlertTriangle className="h-5 w-5 text-yellow-500" />}
+          <DialogTitle className="flex items-center gap-3">
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-full blur opacity-25" />
+              <img
+                src={
+                  user.url_img || `/placeholder.svg?height=48&width=48&text=${user.first_name[0]}${user.last_name[0]}`
+                }
+                alt={`${user.first_name} ${user.last_name}`}
+                className="relative h-12 w-12 rounded-full border-2 border-white dark:border-gray-800 shadow-lg object-cover"
+              />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+                  {user.first_name} {user.last_name}
+                </span>
+              </div>
+              <div className="text-sm text-muted-foreground font-normal">{user.email}</div>
+            </div>
           </DialogTitle>
-          <DialogDescription>Complete user information and account details.</DialogDescription>
         </DialogHeader>
         <DialogBody className="space-y-6">
-          {/* Status and Role */}
-          <div className="flex items-center gap-4"> {/* Removed flex-row-reverse */}
-            <Badge className={ROLE_COLORS[user.role]}>
-              <RoleIcon className="h-3 w-3 mr-1" /> {/* Adjusted to mr-1 for LTR icon spacing */}
+          {/* Role */}
+          <div className="flex items-center gap-3">
+            <Badge className={cn(ROLE_COLORS[user.role], "gap-1.5 px-3 py-1.5 border shadow-sm")}>
+              <RoleIcon className="h-3.5 w-3.5" />
               {user.role}
             </Badge>
-            <Badge className={STATUS_COLORS[user.status]}>{user.status}</Badge>
-            <div className="text-sm text-gray-500">Created: {new Date(user.createdDate).toLocaleDateString()}</div>
-            {user.lastLogin && (
-              <div className="text-sm text-gray-500">Last login: {new Date(user.lastLogin).toLocaleDateString()}</div>
-            )}
-          </div>
-
-          {/* Account Security */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Account Security</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-2"> {/* Removed flex-row-reverse */}
-                {user.isVerified ? (
-                  <Shield className="h-4 w-4 text-green-500" />
-                ) : (
-                  <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                )}
-                <span className="text-sm">{user.isVerified ? "Verified" : "Unverified"}</span>
-              </div>
-              <div className="flex items-center gap-2"> {/* Removed flex-row-reverse */}
-                {user.loginAttempts > 0 ? (
-                  <Lock className="h-4 w-4 text-red-500" />
-                ) : (
-                  <Unlock className="h-4 w-4 text-green-500" />
-                )}
-                <span className="text-sm">{user.loginAttempts} failed attempts</span>
-              </div>
-            </div>
           </div>
 
           {/* Contact Information */}
           <div className="space-y-3">
-            <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Contact Information</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-2"> {/* Removed flex-row-reverse */}
-                <Mail className="h-4 w-4 text-gray-400" />
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+              <div className="h-1 w-1 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600" />
+              Contact Information
+            </h3>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-violet-500/5 to-fuchsia-500/5 border border-violet-200/50 dark:border-violet-700/50">
+                <Mail className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">{user.email}</span>
               </div>
-              <div className="flex items-center gap-2"> {/* Removed flex-row-reverse */}
-                <Phone className="h-4 w-4 text-gray-400" />
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-violet-500/5 to-fuchsia-500/5 border border-violet-200/50 dark:border-violet-700/50">
+                <Phone className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">{user.phone}</span>
               </div>
             </div>
-            <div className="flex items-center gap-2"> {/* Removed flex-row-reverse */}
-              <MapPin className="h-4 w-4 text-gray-400" />
-              <span className="text-sm">{user.address}</span>
-            </div>
           </div>
 
-          {/* Role-specific Information */}
-          {user.role === "staff" && user.department && (
+          {/* Profile Image */}
+          {user.url_img && (
             <div className="space-y-3">
-              <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Employment Details</h3>
-              <div className="flex items-center gap-2"> {/* Removed flex-row-reverse */}
-                <Building className="h-4 w-4 text-gray-400" />
-                <span className="text-sm">{user.department}</span>
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                <div className="h-1 w-1 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600" />
+                Profile Image
+              </h3>
+              <div className="relative w-32 h-32 mx-auto">
+                <div className="absolute -inset-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-full blur opacity-25" />
+                <img
+                  src={user.url_img || "/placeholder.svg"}
+                  alt={`${user.first_name} ${user.last_name}`}
+                  className="relative w-full h-full rounded-full border-4 border-white dark:border-gray-800 shadow-xl object-cover"
+                />
               </div>
-            </div>
-          )}
-
-          {user.role === "parent" && user.children && (
-            <div className="space-y-3">
-              <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Children</h3>
-              <div className="flex items-center gap-2"> {/* Removed flex-row-reverse */}
-                <Baby className="h-4 w-4 text-gray-400" />
-                <span className="text-sm">{user.children.length} child(ren) enrolled</span>
-              </div>
-            </div>
-          )}
-
-          {/* Emergency Contact */}
-          {user.emergencyContact && (
-            <div className="space-y-3">
-              <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Emergency Contact</h3>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="font-medium">{user.emergencyContact.name}</div>
-                <div className="text-sm text-gray-600">{user.emergencyContact.relationship}</div>
-                <div className="text-sm text-gray-600">{user.emergencyContact.phone}</div>
-              </div>
-            </div>
-          )}
-
-          {/* Permissions */}
-          {user.permissions && user.permissions.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Permissions</h3>
-              <div className="flex flex-wrap gap-2">
-                {user.permissions.map((permission, index) => (
-                  <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800">
-                    {permission}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Notes */}
-          {user.notes && (
-            <div className="space-y-3">
-              <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Notes</h3>
-              <div className="bg-gray-50 rounded-lg p-4 text-sm">{user.notes}</div>
             </div>
           )}
         </DialogBody>
         <DialogFooter>
-          <Button onClick={() => setOpen(false)}>Close</Button>
+          <Button
+            onClick={() => setOpen(false)}
+            className="shadow-lg bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-700 text-white border-0"
+          >
+            Close
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
 
-function DeleteUserDialog({ user }: { user: UserManagementUser }) {
+function DeleteUserDialog({ user, onUserDeleted }: { user: User; onUserDeleted: () => void }) {
   const [open, setOpen] = React.useState(false)
+  const [loading, setLoading] = React.useState(false)
 
-  const handleDelete = () => {
-    console.log("Deleting user:", user.id)
-    setOpen(false)
+  const handleDelete = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch(`${API_URL}/${user.id}`, {
+        method: "DELETE",
+      })
+      if (response.ok) {
+        setOpen(false)
+        onUserDeleted()
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-red-600 hover:text-red-700 hover:bg-gradient-to-r hover:from-red-500/10 hover:to-rose-500/10 transition-all"
+        >
           <Trash2 className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-red-600">
-            <AlertTriangle className="h-5 w-5" />
-            Delete User Account
+            <Trash2 className="h-5 w-5" />
+            Delete User
           </DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete {user.firstName} {user.lastName}'s account? This action cannot be undone.
+            Are you sure you want to delete {user.first_name} {user.last_name}'s account? This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <h4 className="font-medium text-red-800 mb-2">This will permanently:</h4>
-            <ul className="text-sm text-red-700 space-y-1">
-              <li>• Remove all user data and account information</li>
-              <li>• Delete associated messages and communications</li>
-              <li>• Remove access to the childcare management system</li>
-              {user.role === "parent" && <li>• Archive child enrollment records</li>}
-              {user.role === "staff" && <li>• Remove staff scheduling and attendance data</li>}
-            </ul>
-          </div>
-        </DialogBody>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
-          <Button variant="default" onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
-            Delete User Account
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function ResetPasswordDialog({ user }: { user: UserManagementUser }) {
-  const [open, setOpen] = React.useState(false)
-  const [sendEmail, setSendEmail] = React.useState(true)
-
-  const handleReset = () => {
-    console.log("Resetting password for user:", user.id, "Send email:", sendEmail)
-    setOpen(false)
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" title="Reset Password">
-          <Key className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Reset Password</DialogTitle>
-          <DialogDescription>
-            Reset the password for {user.firstName} {user.lastName}.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogBody>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              This will generate a new temporary password and optionally send login instructions to the user's email
-              address.
-            </p>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="sendResetEmail"
-                checked={sendEmail}
-                onChange={(e) => setSendEmail(e.target.checked)}
-                className="rounded"
+          <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950/20 dark:to-rose-950/20 border-2 border-red-200 dark:border-red-800 rounded-xl p-6">
+            <div className="flex items-center gap-4">
+              <img
+                src={
+                  user.url_img || `/placeholder.svg?height=48&width=48&text=${user.first_name[0]}${user.last_name[0]}`
+                }
+                alt={`${user.first_name} ${user.last_name}`}
+                className="h-12 w-12 rounded-full border-2 border-red-200 dark:border-red-800 object-cover"
               />
-              <Label htmlFor="sendResetEmail">Send password reset email to {user.email}</Label>
+              <div>
+                <div className="font-semibold text-red-900 dark:text-red-100">
+                  {user.first_name} {user.last_name}
+                </div>
+                <div className="text-sm text-red-700 dark:text-red-300">{user.email}</div>
+                <Badge className={cn(ROLE_COLORS[user.role], "mt-1")}>{user.role}</Badge>
+              </div>
             </div>
           </div>
         </DialogBody>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+        <DialogFooter className="gap-2">
+          <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
             Cancel
           </Button>
-          <Button onClick={handleReset}>Reset Password</Button>
+          <Button
+            onClick={handleDelete}
+            disabled={loading}
+            className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white border-0"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete User
+              </>
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -875,19 +643,43 @@ function ResetPasswordDialog({ user }: { user: UserManagementUser }) {
 
 export default function UserManagement() {
   const { can } = useRBAC()
-  const [users, setUsers] = React.useState<UserManagementUser[]>(INITIAL_USERS)
+  const [users, setUsers] = React.useState<User[]>([])
+  const [loading, setLoading] = React.useState(true)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [roleFilter, setRoleFilter] = React.useState<string>("all")
-  const [statusFilter, setStatusFilter] = React.useState<string>("all")
+
+  const fetchUsers = React.useCallback(async () => {
+    setLoading(true)
+    try {
+      const response = await fetch(API_URL)
+      if (response.ok) {
+        const data = await response.json()
+        setUsers(data)
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    fetchUsers()
+  }, [fetchUsers])
 
   if (!can("manage:settings")) {
     return (
       <AppShell title="User Management">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
-            <p className="text-gray-500">You don't have permission to manage users.</p>
+            <div className="relative inline-block">
+              <div className="absolute -inset-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-full blur opacity-25" />
+              <Shield className="relative h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+              Access Restricted
+            </h3>
+            <p className="text-muted-foreground">You don't have permission to manage users.</p>
           </div>
         </div>
       </AppShell>
@@ -896,65 +688,107 @@ export default function UserManagement() {
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
-      user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesRole = roleFilter === "all" || user.role === roleFilter
-    const matchesStatus = statusFilter === "all" || user.status === statusFilter
-    return matchesSearch && matchesRole && matchesStatus
+    return matchesSearch && matchesRole
   })
 
   const totalUsers = users.length
-  const activeUsers = users.filter((u) => u.status === "active").length
-  const pendingUsers = users.filter((u) => u.status === "pending").length
-  const suspendedUsers = users.filter((u) => u.status === "suspended").length
+  const adminCount = users.filter((u) => u.role === "admin").length
+  const staffCount = users.filter((u) => u.role === "staff").length
+  const parentCount = users.filter((u) => u.role === "parent").length
 
   return (
     <AppShell title="User Management">
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-4">
-            <div className={cn("flex items-center gap-3")}>
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">{totalUsers}</div>
-                <div className="text-sm text-gray-500">Total Users</div>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className={cn("flex items-center gap-3")}>
-              <div className="p-2 bg-green-100 rounded-lg">
-                <UserCheck className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">{activeUsers}</div>
-                <div className="text-sm text-gray-500">Active Users</div>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className={cn("flex items-center gap-3")}>
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Clock className="h-5 w-5 text-yellow-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">{pendingUsers}</div>
-                <div className="text-sm text-gray-500">Pending</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="relative overflow-hidden group hover:shadow-2xl transition-all duration-500">
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-purple-500/5 to-fuchsia-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 rounded-full blur-3xl" />
+            <div className="relative p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Total Users</div>
+                  <div className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+                    {totalUsers}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    All accounts
+                  </div>
+                </div>
+                <div className="p-4 bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 rounded-2xl border border-violet-200/50 dark:border-violet-700/50 shadow-lg">
+                  <Users className="h-8 w-8 text-violet-600 dark:text-violet-400" />
+                </div>
               </div>
             </div>
           </Card>
-          <Card className="p-4">
-            <div className={cn("flex items-center gap-3")}>
-              <div className="p-2 bg-red-100 rounded-lg">
-                <UserX className="h-5 w-5 text-red-600" />
+
+          <Card className="relative overflow-hidden group hover:shadow-2xl transition-all duration-500">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-violet-500/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/10 to-violet-500/10 rounded-full blur-3xl" />
+            <div className="relative p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Administrators</div>
+                  <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
+                    {adminCount}
+                  </div>
+                  <div className="text-xs text-purple-600 dark:text-purple-400 mt-1 flex items-center gap-1">
+                    <Settings className="h-3 w-3" />
+                    Admin role
+                  </div>
+                </div>
+                <div className="p-4 bg-gradient-to-br from-purple-500/10 to-violet-500/10 rounded-2xl border border-purple-200/50 dark:border-purple-700/50 shadow-lg">
+                  <Settings className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                </div>
               </div>
-              <div>
-                <div className="text-2xl font-bold">{suspendedUsers}</div>
-                <div className="text-sm text-gray-500">Suspended</div>
+            </div>
+          </Card>
+
+          <Card className="relative overflow-hidden group hover:shadow-2xl transition-all duration-500">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-cyan-500/5 to-sky-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-full blur-3xl" />
+            <div className="relative p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Staff Members</div>
+                  <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                    {staffCount}
+                  </div>
+                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1">
+                    <GraduationCap className="h-3 w-3" />
+                    Staff role
+                  </div>
+                </div>
+                <div className="p-4 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-2xl border border-blue-200/50 dark:border-blue-700/50 shadow-lg">
+                  <GraduationCap className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="relative overflow-hidden group hover:shadow-2xl transition-all duration-500">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-green-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-500/10 to-green-500/10 rounded-full blur-3xl" />
+            <div className="relative p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Parents</div>
+                  <div className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+                    {parentCount}
+                  </div>
+                  <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1">
+                    <Baby className="h-3 w-3" />
+                    Parent role
+                  </div>
+                </div>
+                <div className="p-4 bg-gradient-to-br from-emerald-500/10 to-green-500/10 rounded-2xl border border-emerald-200/50 dark:border-emerald-700/50 shadow-lg">
+                  <Baby className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+                </div>
               </div>
             </div>
           </Card>
@@ -962,159 +796,164 @@ export default function UserManagement() {
 
         {/* User Management */}
         <Section title="User Directory" description="Manage all user accounts in your childcare center.">
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Search and Filters */}
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
-                <Search
-                  className={cn(
-                    "absolute top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400",
-                     "right-3",
-                  )}
-                />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search users by name or email..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className={cn("pl-10")}
+                  className="pl-10 transition-all focus:ring-2 focus:ring-purple-500/20"
                 />
               </div>
-              <div className="flex gap-2">
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-32">
-                    <Filter className="h-4 w-4 mr-2" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Roles</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="staff">Staff</SelectItem>
-                    <SelectItem value="parent">Parent</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="suspended">Suspended</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-48">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="admin">
+                    <div className="flex items-center gap-2">
+                      <Settings className="h-4 w-4" />
+                      Admin
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="staff">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="h-4 w-4" />
+                      Staff
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="parent">
+                    <div className="flex items-center gap-2">
+                      <Baby className="h-4 w-4" />
+                      Parent
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Action Buttons */}
-            <div className={cn("flex justify-between items-center")}>
+            <div className="flex justify-between items-center">
+              <div className="flex gap-3">
+                <AddUserDialog onUserAdded={fetchUsers} />
+              </div>
               <div className="flex gap-2">
-                <AddUserDialog />
-                <Button variant="outline" className={cn("gap-2 bg-transparent")}>
-                  <Upload className="h-4 w-4" />
-                  Import Users
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={fetchUsers}
+                  disabled={loading}
+                  className="shadow-sm bg-transparent hover:bg-accent"
+                  title="Refresh"
+                >
+                  <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
                 </Button>
               </div>
-              <Button variant="outline" className={cn("gap-2 bg-transparent")}>
-                <Download className="h-4 w-4" />
-                Export Users
-              </Button>
             </div>
 
-            {/* Users Table */}
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Last Login</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => {
-                    const RoleIcon = ROLE_ICONS[user.role]
-                    return (
-                      <TableRow key={user.id}>
-                        <TableCell>
-                          <div className={cn("flex items-center gap-3")}>
-                            <div className="relative">
-                              <User/>
-                              {!user.isVerified && (
-                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full border border-white" />
-                              )}
-                            </div>
-                            <div>
-                              <div className="font-medium">
-                                {user.firstName} {user.lastName}
-                              </div>
-                              <div className="text-sm text-gray-500">{user.email}</div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={ROLE_COLORS[user.role]}>
-                            <RoleIcon className={cn("h-3 w-3")} />
-                            {user.role}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={STATUS_COLORS[user.status]}>{user.status}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div className={cn("flex items-center gap-1")}>
-                              <Phone className="h-3 w-3 text-gray-400" />
-                              {user.phone}
-                            </div>
-                            <div className={cn("flex items-center gap-1 text-gray-500")}>
-                              <Mail className="h-3 w-3 text-gray-400" />
-                              {user.email}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            {user.lastLogin ? (
-                              <>
-                                <div>{new Date(user.lastLogin).toLocaleDateString()}</div>
-                                <div className="text-gray-500">{new Date(user.lastLogin).toLocaleTimeString()}</div>
-                              </>
-                            ) : (
-                              <span className="text-gray-400">Never</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <UserDetailsDialog user={user} />
-                            <EditUserDialog user={user} />
-                            <ResetPasswordDialog user={user} />
-                            <DeleteUserDialog user={user} />
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-
-            {filteredUsers.length === 0 && (
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
-                <p className="text-gray-500 mb-4">
-                  {searchQuery || roleFilter !== "all" || statusFilter !== "all"
-                    ? "Try adjusting your search or filters."
-                    : "Get started by adding your first user."}
-                </p>
-                {!searchQuery && roleFilter === "all" && statusFilter === "all" && <AddUserDialog />}
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="text-center space-y-4">
+                  <div className="relative inline-block">
+                    <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-full blur animate-pulse" />
+                    <Loader2 className="relative h-12 w-12 text-violet-600 dark:text-violet-400 animate-spin" />
+                  </div>
+                  <div className="text-sm text-muted-foreground">Loading users...</div>
+                </div>
               </div>
+            ) : (
+              <>
+                <div className="relative overflow-hidden border-2 rounded-2xl shadow-lg">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600" />
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gradient-to-r from-violet-500/5 via-purple-500/5 to-fuchsia-500/5 hover:from-violet-500/10 hover:via-purple-500/10 hover:to-fuchsia-500/10">
+                        <TableHead className="font-semibold">User</TableHead>
+                        <TableHead className="font-semibold">Role</TableHead>
+                        <TableHead className="font-semibold">Contact</TableHead>
+                        <TableHead className="font-semibold text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredUsers.map((user) => {
+                        const RoleIcon = ROLE_ICONS[user.role]
+                        return (
+                          <TableRow
+                            key={user.id}
+                            className="hover:bg-gradient-to-r hover:from-violet-500/5 hover:via-purple-500/5 hover:to-fuchsia-500/5 transition-all"
+                          >
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="relative group">
+                                  <div className="absolute -inset-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-full blur opacity-0 group-hover:opacity-25 transition-opacity" />
+                                  <img
+                                    src={
+                                      user.url_img ||
+                                      `/placeholder.svg?height=40&width=40&text=${user.first_name[0] || "/placeholder.svg"}${user.last_name[0]}`
+                                    }
+                                    alt={`${user.first_name} ${user.last_name}`}
+                                    className="relative h-10 w-10 rounded-full border-2 border-white dark:border-gray-800 shadow-md object-cover"
+                                  />
+                                </div>
+                                <div>
+                                  <div className="font-semibold text-foreground">
+                                    {user.first_name} {user.last_name}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">{user.email}</div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={cn(ROLE_COLORS[user.role], "gap-1.5 font-medium border shadow-sm")}>
+                                <RoleIcon className="h-3.5 w-3.5" />
+                                {user.role}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm space-y-1">
+                                <div className="flex items-center gap-1.5 text-muted-foreground">
+                                  <Phone className="h-3.5 w-3.5" />
+                                  {user.phone}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center justify-end gap-1">
+                                <UserDetailsDialog user={user} />
+                                <EditUserDialog user={user} onUserUpdated={fetchUsers} />
+                                <DeleteUserDialog user={user} onUserDeleted={fetchUsers} />
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {filteredUsers.length === 0 && !loading && (
+                  <div className="text-center py-12">
+                    <div className="relative inline-block mb-4">
+                      <div className="absolute -inset-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-full blur opacity-25" />
+                      <UserCircle className="relative h-16 w-16 text-muted-foreground opacity-50" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground mb-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+                      No users found
+                    </h3>
+                    <p className="text-muted-foreground mb-6">
+                      {searchQuery || roleFilter !== "all"
+                        ? "Try adjusting your search or filters."
+                        : "Get started by adding your first user."}
+                    </p>
+                    {!searchQuery && roleFilter === "all" && <AddUserDialog onUserAdded={fetchUsers} />}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </Section>
