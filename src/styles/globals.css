@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* LIGHT THEME */
+:root {
+  /* backgrounds */
+  --bg: 0 0% 100%;            /* white */
+  --surface: 210 20% 98%;
+  --card: 0 0% 100%;
+  --popover: 0 0% 100%;
+
+  /* text */
+  --foreground: 222 47% 11%;  /* slate-900 */
+  --muted: 215 16% 47%;       /* slate-500 */
+  --muted-foreground: 215 20% 65%;
+
+  /* brand / accent */
+  --primary: 258 90% 66%;     /* violet-500-ish */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 14% 96%;
+  --secondary-foreground: 222 47% 11%;
+  --accent: 259 94% 62%;
+  --accent-foreground: 0 0% 100%;
+
+  /* states */
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* chrome */
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 262 83% 58%;
+
+  /* gradient helpers (no tailwind colors hardcoded) */
+  --grad-hero-from: 262 83% 58%;
+  --grad-hero-via: 277 85% 67%;
+  --grad-hero-to: 316 73% 52%;
+}
+
+/* DARK THEME */
+html.dark {
+  --bg: 222 47% 7%;           /* slate-950 */
+  --surface: 222 47% 9%;
+  --card: 222 47% 11%;
+  --popover: 222 47% 9%;
+
+  --foreground: 210 40% 96%;  /* slate-50 */
+  --muted: 215 16% 72%;
+  --muted-foreground: 217 16% 80%;
+
+  --primary: 266 87% 70%;     /* softer violet for dark */
+  --primary-foreground: 222 47% 10%;
+  --secondary: 222 47% 12%;
+  --secondary-foreground: 210 40% 96%;
+  --accent: 264 85% 78%;
+  --accent-foreground: 222 47% 10%;
+
+  --destructive: 0 72% 50%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 217 25% 26%;
+  --input: 217 25% 26%;
+  --ring: 265 84% 77%;
+
+  --grad-hero-from: 258 90% 60%;
+  --grad-hero-via: 277 85% 60%;
+  --grad-hero-to: 316 73% 55%;
+}
+
+/* generic utilities */
+.bg-app { background: hsl(var(--bg)); }
+.bg-surface { background: hsl(var(--surface)); }
+.bg-card { background: hsl(var(--card)); }
+.text-app { color: hsl(var(--foreground)); }
+.text-muted { color: hsl(var(--muted)); }
+.border-app { border-color: hsl(var(--border)); }
+
+/* gradient tokens */
+.bg-hero {
+  background-image: linear-gradient(
+    to bottom right,
+    hsl(var(--grad-hero-from)),
+    hsl(var(--grad-hero-via)),
+    hsl(var(--grad-hero-to))
+  );
+}
+
+/* remove default focus outline & use ring var */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px hsl(var(--ring) / 0.35);
+}

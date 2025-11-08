@@ -26,6 +26,7 @@ import {
   UserCog,
   TrendingUp,
   Baby,
+  LogOut,
 } from "lucide-react"
 import { Button } from "../components/ui/button"
 import { cn } from "../lib/utils"
@@ -33,47 +34,30 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 interface DashboardStats {
-  // Children
   totalChildren: number
   childrenPresent: number
   childrenAbsent: number
-
-  // Attendance
   checkInsToday: number
   checkOutsToday: number
   attendanceRate: number
-
-  // Billing
   totalRevenue: number
   revenueCollected: number
   revenueOverdue: number
   openInvoices: number
   paidInvoices: number
   overdueInvoices: number
-
-  // Health
   healthAlerts: number
   healthRecordsTotal: number
-
-  // Media & Albums
   totalMedia: number
   mediaToday: number
   totalAlbums: number
-
-  // Reports
   reportsGenerated: number
-
-  // Staff & Shifts
   totalStaff: number
   activeShifts: number
   staffOnDuty: number
-
-  // Bookings & Events
   activeBookings: number
   upcomingEvents: number
   todayEvents: number
-
-  // Users
   totalUsers: number
   activeUsers: number
 }
@@ -91,8 +75,15 @@ interface QuickStats {
   trendUp?: boolean
 }
 
-
-function StunningHero({ stats, loading }: { stats: DashboardStats | null; loading: boolean }) {
+function StunningHero({
+  stats,
+  loading,
+  onLogout,
+}: {
+  stats: DashboardStats | null
+  loading: boolean
+  onLogout: () => void
+}) {
   const navigate = useNavigate()
   return (
     <div className="relative overflow-hidden rounded-3xl shadow-2xl">
@@ -113,6 +104,19 @@ function StunningHero({ stats, loading }: { stats: DashboardStats | null; loadin
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#fff2_1px,transparent_1px),linear-gradient(to_bottom,#fff2_1px,transparent_1px)] bg-[size:32px_32px] opacity-30" />
 
       <div className="relative p-8 md:p-12 text-white">
+        {/* Top-right Logout */}
+        <div className="absolute right-4 top-4">
+          <Button
+            onClick={onLogout}
+            variant="secondary"
+            className="bg-white/90 text-rose-600 hover:bg-white font-semibold shadow-md"
+            title="Logout"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
+        </div>
+
         <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
           <div className="inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-white/20 backdrop-blur-xl border-2 border-white/30 shadow-2xl">
             <Sparkles className="h-10 w-10 animate-pulse drop-shadow-glow text-yellow-200" />
@@ -165,92 +169,92 @@ function StunningHero({ stats, loading }: { stats: DashboardStats | null; loadin
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {loading
             ? Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="rounded-2xl bg-white/15 p-6 backdrop-blur-xl border border-white/20 animate-pulse shadow-xl"
-              >
-                <div className="h-4 bg-white/20 rounded w-28 mb-3" />
-                <div className="h-10 bg-white/20 rounded w-24 mb-3" />
-                <div className="h-2.5 bg-white/20 rounded" />
-              </div>
-            ))
-            : [
-              {
-                label: "Attendance Rate",
-                value: `${stats?.attendanceRate || 0}%`,
-                bar: stats?.attendanceRate || 0,
-                icon: UserCheck,
-                trend: "+5%",
-                trendUp: true,
-                subtext: `${stats?.childrenPresent || 0}/${stats?.totalChildren || 0} present`,
-              },
-              {
-                label: "Revenue Collected",
-                value: `$${(stats?.revenueCollected || 0).toLocaleString()}`,
-                bar:
-                  stats?.revenueCollected && stats?.totalRevenue
-                    ? Math.round((stats.revenueCollected / stats.totalRevenue) * 100)
-                    : 0,
-                icon: DollarSign,
-                trend: "+12%",
-                trendUp: true,
-                subtext: `${stats?.paidInvoices || 0} paid invoices`,
-              },
-              {
-                label: "Active Staff",
-                value: stats?.staffOnDuty || 0,
-                bar:
-                  stats?.staffOnDuty && stats?.totalStaff
-                    ? Math.round((stats.staffOnDuty / stats.totalStaff) * 100)
-                    : 0,
-                icon: UserCog,
-                trend: "On duty",
-                trendUp: true,
-                subtext: `${stats?.activeShifts || 0} active shifts`,
-              },
-              {
-                label: "Media Shared",
-                value: stats?.totalMedia || 0,
-                bar: Math.min((stats?.mediaToday || 0) * 10, 100),
-                icon: Camera,
-                trend: `+${stats?.mediaToday || 0}`,
-                trendUp: true,
-                subtext: `${stats?.totalAlbums || 0} albums`,
-              },
-            ].map((s) => {
-              const Icon = s.icon
-              const TrendIcon = s.trendUp ? ArrowUpRight : ArrowDownRight
-              return (
                 <div
-                  key={s.label}
-                  className="group rounded-2xl bg-white/15 p-6 backdrop-blur-xl border border-white/20 hover:bg-white/25 hover:border-white/40 transition-all duration-300 shadow-xl hover:shadow-2xl hover:-translate-y-2 cursor-pointer"
+                  key={i}
+                  className="rounded-2xl bg-white/15 p-6 backdrop-blur-xl border border-white/20 animate-pulse shadow-xl"
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="text-xs text-white/90 font-bold uppercase tracking-wider">{s.label}</div>
-                    <Icon className="h-5 w-5 text-white/70 group-hover:text-white transition-colors" />
-                  </div>
-                  <div className="flex items-end gap-2 mb-2">
-                    <div className="text-4xl font-black text-white drop-shadow-lg">{s.value}</div>
-                    <div
-                      className={cn(
-                        "flex items-center gap-0.5 text-xs font-bold mb-2",
-                        s.trendUp ? "text-emerald-200" : "text-rose-200",
-                      )}
-                    >
-                      <TrendIcon className="h-3.5 w-3.5" />
-                      {s.trend}
+                  <div className="h-4 bg-white/20 rounded w-28 mb-3" />
+                  <div className="h-10 bg-white/20 rounded w-24 mb-3" />
+                  <div className="h-2.5 bg-white/20 rounded" />
+                </div>
+              ))
+            : [
+                {
+                  label: "Attendance Rate",
+                  value: `${stats?.attendanceRate || 0}%`,
+                  bar: stats?.attendanceRate || 0,
+                  icon: UserCheck,
+                  trend: "+5%",
+                  trendUp: true,
+                  subtext: `${stats?.childrenPresent || 0}/${stats?.totalChildren || 0} present`,
+                },
+                {
+                  label: "Revenue Collected",
+                  value: `$${(stats?.revenueCollected || 0).toLocaleString()}`,
+                  bar:
+                    stats?.revenueCollected && stats?.totalRevenue
+                      ? Math.round((stats.revenueCollected / stats.totalRevenue) * 100)
+                      : 0,
+                  icon: DollarSign,
+                  trend: "+12%",
+                  trendUp: true,
+                  subtext: `${stats?.paidInvoices || 0} paid invoices`,
+                },
+                {
+                  label: "Active Staff",
+                  value: stats?.staffOnDuty || 0,
+                  bar:
+                    stats?.staffOnDuty && stats?.totalStaff
+                      ? Math.round((stats.staffOnDuty / stats.totalStaff) * 100)
+                      : 0,
+                  icon: UserCog,
+                  trend: "On duty",
+                  trendUp: true,
+                  subtext: `${stats?.activeShifts || 0} active shifts`,
+                },
+                {
+                  label: "Media Shared",
+                  value: stats?.totalMedia || 0,
+                  bar: Math.min((stats?.mediaToday || 0) * 10, 100),
+                  icon: Camera,
+                  trend: `+${stats?.mediaToday || 0}`,
+                  trendUp: true,
+                  subtext: `${stats?.totalAlbums || 0} albums`,
+                },
+              ].map((s) => {
+                const Icon = s.icon
+                const TrendIcon = s.trendUp ? ArrowUpRight : ArrowDownRight
+                return (
+                  <div
+                    key={s.label}
+                    className="group rounded-2xl bg-white/15 p-6 backdrop-blur-xl border border-white/20 hover:bg-white/25 hover:border-white/40 transition-all duration-300 shadow-xl hover:shadow-2xl hover:-translate-y-2 cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-xs text-white/90 font-bold uppercase tracking-wider">{s.label}</div>
+                      <Icon className="h-5 w-5 text-white/70 group-hover:text-white transition-colors" />
+                    </div>
+                    <div className="flex items-end gap-2 mb-2">
+                      <div className="text-4xl font-black text-white drop-shadow-lg">{s.value}</div>
+                      <div
+                        className={cn(
+                          "flex items-center gap-0.5 text-xs font-bold mb-2",
+                          s.trendUp ? "text-emerald-200" : "text-rose-200",
+                        )}
+                      >
+                        <TrendIcon className="h-3.5 w-3.5" />
+                        {s.trend}
+                      </div>
+                    </div>
+                    <div className="text-xs text-white/75 mb-3 font-medium">{s.subtext}</div>
+                    <div className="h-3 rounded-full bg-white/20 overflow-hidden shadow-inner">
+                      <div
+                        className="h-3 rounded-full bg-gradient-to-r from-white/90 to-white shadow-lg transition-all duration-1000 ease-out"
+                        style={{ width: `${s.bar}%` }}
+                      />
                     </div>
                   </div>
-                  <div className="text-xs text-white/75 mb-3 font-medium">{s.subtext}</div>
-                  <div className="h-3 rounded-full bg-white/20 overflow-hidden shadow-inner">
-                    <div
-                      className="h-3 rounded-full bg-gradient-to-r from-white/90 to-white shadow-lg transition-all duration-1000 ease-out"
-                      style={{ width: `${s.bar}%` }}
-                    />
-                  </div>
-                </div>
-              )
-            })}
+                )
+              })}
         </div>
       </div>
     </div>
@@ -264,32 +268,49 @@ export default function Dashboard() {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
   const navigate = useNavigate()
 
+  // Helper to always include cookies
+  const withCreds = (url: string, init?: RequestInit) =>
+    fetch(url, { credentials: "include", cache: "no-store", ...(init || {}) })
+
+  // Logout handler (clears httpOnly cookies server-side)
+  const handleLogout = async () => {
+    try {
+      await withCreds("http://localhost:8080/auth/logout", { method: "GET" })
+    } catch (e) {
+      console.error("Logout request failed (will still redirect):", e)
+    } finally {
+      // Clear any client-side storage you might have
+      try {
+        localStorage.clear()
+        sessionStorage.clear()
+      } catch {}
+      // Hard redirect to login to kill any in-memory state
+      window.location.replace("/login")
+    }
+  }
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       console.log("[Dashboard] Fetching comprehensive data from localhost:8080...")
       setLoading(true)
       setError(null)
-
-
       try {
-        // Fetch all entities in parallel
+        // Fetch all entities in parallel WITH credentials
         const responses = await Promise.allSettled([
-          fetch("http://localhost:8080/children"),
-          fetch("http://localhost:8080/attendance"),
-          fetch("http://localhost:8080/billing"),
-          fetch("http://localhost:8080/health"),
-          fetch("http://localhost:8080/media/albums"), // Media endpoint
-          fetch("http://localhost:8080/report"),
-          fetch("http://localhost:8080/shift"),
-          fetch("http://localhost:8080/booking"),
-          fetch("http://localhost:8080/calendar/events"),
-          fetch("http://localhost:8080/media/albums"),
-          fetch("http://localhost:8080/staff"),
-          fetch("http://localhost:8080/users"),
+          withCreds("http://localhost:8080/children"),
+          withCreds("http://localhost:8080/attendance"),
+          withCreds("http://localhost:8080/billing"),
+          withCreds("http://localhost:8080/health"),
+          withCreds("http://localhost:8080/media/albums"),
+          withCreds("http://localhost:8080/report"),
+          withCreds("http://localhost:8080/shift"),
+          withCreds("http://localhost:8080/booking"),
+          withCreds("http://localhost:8080/calendar/events"),
+          withCreds("http://localhost:8080/media/albums"),
+          withCreds("http://localhost:8080/staff"),
+          withCreds("http://localhost:8080/users"),
         ])
 
-        // Process responses safely
         const [
           childrenRes,
           attendanceRes,
@@ -305,7 +326,6 @@ export default function Dashboard() {
           userRes,
         ] = responses
 
-        // Parse successful responses
         const children =
           childrenRes.status === "fulfilled" && childrenRes.value.ok ? await childrenRes.value.json() : []
         const attendance =
@@ -336,18 +356,14 @@ export default function Dashboard() {
           users: users.length,
         })
 
-        // Calculate comprehensive statistics
         const today = new Date().toISOString().split("T")[0]
-
-        // Children stats
         const totalChildren = Array.isArray(children) ? children.length : 0
 
-        // Attendance stats
         const todayAttendance = Array.isArray(attendance)
           ? attendance.filter(
-            (a: any) =>
-              a.date?.startsWith(today) || a.timestamp?.startsWith(today) || a.checkInTime?.startsWith(today),
-          )
+              (a: any) =>
+                a.date?.startsWith(today) || a.timestamp?.startsWith(today) || a.checkInTime?.startsWith(today),
+            )
           : []
 
         const presentCount = todayAttendance.filter(
@@ -358,72 +374,59 @@ export default function Dashboard() {
         const checkOutsToday = todayAttendance.filter((a: any) => a.checkOutTime).length
         const attendanceRate = totalChildren > 0 ? Math.round((presentCount / totalChildren) * 100) : 0
 
-        // Billing stats
         const totalRevenue = Array.isArray(billing)
           ? billing.reduce((sum: number, b: any) => sum + (Number(b.amount) || 0), 0)
           : 0
 
         const paidBilling = Array.isArray(billing) ? billing.filter((b: any) => b.status === "paid") : []
-
         const revenueCollected = paidBilling.reduce((sum: number, b: any) => sum + (Number(b.amount) || 0), 0)
-
         const overdueBilling = Array.isArray(billing) ? billing.filter((b: any) => b.status === "overdue") : []
-
         const revenueOverdue = overdueBilling.reduce((sum: number, b: any) => sum + (Number(b.amount) || 0), 0)
-
         const openInvoices = Array.isArray(billing) ? billing.filter((b: any) => b.status !== "paid").length : 0
 
-        // Health stats
         const healthAlerts = Array.isArray(health)
           ? health.filter((h: any) => h.severity === "high" || h.priority === "high" || h.alert === true).length
           : 0
 
-        // Media stats
         const totalMedia = Array.isArray(media) ? media.length : 0
         const mediaToday = Array.isArray(media)
           ? media.filter(
-            (m: any) =>
-              m.timestamp?.startsWith(today) || m.date?.startsWith(today) || m.uploadedAt?.startsWith(today),
-          ).length
+              (m: any) =>
+                m.timestamp?.startsWith(today) || m.date?.startsWith(today) || m.uploadedAt?.startsWith(today),
+            ).length
           : 0
 
-        // Albums stats
         const totalAlbums = Array.isArray(albums) ? albums.length : 0
-
-        // Reports stats
         const reportsGenerated = Array.isArray(reports) ? reports.length : 0
 
-        // Staff & Shifts stats
         const totalStaff = Array.isArray(staff) ? staff.length : 0
         const activeShifts = Array.isArray(shifts)
           ? shifts.filter((s: any) => {
-            const shiftDate = s.date || s.shiftDate
-            return shiftDate?.startsWith(today) && !s.checkOutTime
-          }).length
+              const shiftDate = s.date || s.shiftDate
+              return shiftDate?.startsWith(today) && !s.checkOutTime
+            }).length
           : 0
 
-        const staffOnDuty = activeShifts // Simplified - can be more complex
+        const staffOnDuty = activeShifts
 
-        // Bookings & Events stats
         const activeBookings = Array.isArray(bookings)
           ? bookings.filter((b: any) => b.status === "confirmed" || b.status === "active").length
           : 0
 
         const upcomingEvents = Array.isArray(events)
           ? events.filter((e: any) => {
-            const eventDate = new Date(e.date || e.time || e.startDate)
-            return eventDate > new Date()
-          }).length
+              const eventDate = new Date(e.date || e.time || e.startDate)
+              return eventDate > new Date()
+            }).length
           : 0
 
         const todayEvents = Array.isArray(events)
           ? events.filter((e: any) => {
-            const eventDate = e.date || e.time || e.startDate
-            return eventDate?.startsWith(today)
-          }).length
+              const eventDate = e.date || e.time || e.startDate
+              return eventDate?.startsWith(today)
+            }).length
           : 0
 
-        // Users stats
         const totalUsers = Array.isArray(users) ? users.length : 0
         const activeUsers = Array.isArray(users)
           ? users.filter((u: any) => u.status === "active" || u.isActive === true).length
@@ -469,7 +472,7 @@ export default function Dashboard() {
     }
 
     fetchDashboardData()
-    const interval = setInterval(fetchDashboardData, 30000) // Refresh every 30s
+    const interval = setInterval(fetchDashboardData, 30000)
     return () => clearInterval(interval)
   }, [])
 
@@ -571,7 +574,7 @@ export default function Dashboard() {
   return (
     <AppShell>
       <div className="grid gap-6">
-        <StunningHero stats={stats} loading={loading} />
+        <StunningHero stats={stats} loading={loading} onLogout={handleLogout} />
 
         {/* Connection Status */}
         {error ? (
@@ -584,11 +587,7 @@ export default function Dashboard() {
               <div className="flex-1">
                 <p className="font-bold text-rose-900 text-lg mb-1">Connection Error</p>
                 <p className="text-rose-700 mb-3">{error}</p>
-                <Button
-                  onClick={() => window.location.reload()}
-                  size="sm"
-                  className="bg-rose-600 hover:bg-rose-700 text-white"
-                >
+                <Button onClick={() => window.location.reload()} size="sm" className="bg-rose-600 hover:bg-rose-700 text-white">
                   Retry Connection
                 </Button>
               </div>
@@ -622,9 +621,7 @@ export default function Dashboard() {
                 />
 
                 <CardHeader className="relative pb-2">
-                  <CardTitle className="text-sm text-gray-600 font-bold uppercase tracking-wide">
-                    {stat.label}
-                  </CardTitle>
+                  <CardTitle className="text-sm text-gray-600 font-bold uppercase tracking-wide">{stat.label}</CardTitle>
                 </CardHeader>
                 <CardContent className="relative flex items-center justify-between pb-6">
                   {loading ? (
@@ -635,9 +632,7 @@ export default function Dashboard() {
                         {stat.value}
                       </div>
                       {stat.trend && (
-                        <div
-                          className={cn("text-xs font-semibold", stat.trendUp ? "text-emerald-600" : "text-gray-500")}
-                        >
+                        <div className={cn("text-xs font-semibold", stat.trendUp ? "text-emerald-600" : "text-gray-500")}>
                           {stat.trend}
                         </div>
                       )}
@@ -660,10 +655,7 @@ export default function Dashboard() {
         {/* Detailed Sections */}
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Financial Overview */}
-          <Section
-            title="Financial Overview"
-            description="Revenue tracking and billing status"
-          >
+          <Section title="Financial Overview" description="Revenue tracking and billing status">
             {loading ? (
               <div className="space-y-4 animate-pulse">
                 <div className="h-20 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-xl" />
@@ -701,9 +693,7 @@ export default function Dashboard() {
                   <div className="text-3xl font-black text-rose-700">
                     ${(stats?.revenueOverdue || 0).toLocaleString()}
                   </div>
-                  <div className="text-sm text-rose-600 font-semibold mt-2">
-                    {stats?.overdueInvoices || 0} overdue invoices
-                  </div>
+                  <div className="text-sm text-rose-600 font-semibold mt-2">{stats?.overdueInvoices || 0} overdue invoices</div>
                 </div>
 
                 <div className="p-5 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 hover:shadow-lg transition-all">
@@ -744,9 +734,7 @@ export default function Dashboard() {
                     <div className="text-sm font-semibold text-gray-600">Staff on Duty</div>
                     <div className="text-2xl font-black text-gray-800">{stats?.staffOnDuty || 0}</div>
                   </div>
-                  <Badge className="bg-gradient-to-r from-purple-500 to-violet-500 text-white">
-                    {stats?.activeShifts || 0} shifts
-                  </Badge>
+                  <Badge className="bg-gradient-to-r from-purple-500 to-violet-500 text-white">{stats?.activeShifts || 0} shifts</Badge>
                 </div>
 
                 <div className="flex items-center gap-3 p-4 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 transition-all border-2 border-transparent hover:border-blue-200 group">
@@ -777,9 +765,7 @@ export default function Dashboard() {
                     <div className="text-sm font-semibold text-gray-600">Events Today</div>
                     <div className="text-2xl font-black text-gray-800">{stats?.todayEvents || 0}</div>
                   </div>
-                  <Badge className="bg-gradient-to-r from-indigo-500 to-blue-500 text-white">
-                    {stats?.upcomingEvents || 0} upcoming
-                  </Badge>
+                  <Badge className="bg-gradient-to-r from-indigo-500 to-blue-500 text-white">{stats?.upcomingEvents || 0} upcoming</Badge>
                 </div>
 
                 <div className="flex items-center gap-3 p-4 rounded-xl hover:bg-gradient-to-r hover:from-slate-50 hover:to-gray-50 transition-all border-2 border-transparent hover:border-slate-200 group">
@@ -813,9 +799,7 @@ export default function Dashboard() {
                     <div className="text-sm font-semibold text-gray-600">Total Media</div>
                     <div className="text-2xl font-black text-gray-800">{stats?.totalMedia || 0}</div>
                   </div>
-                  <Badge className="bg-gradient-to-r from-pink-500 to-rose-500 text-white">
-                    +{stats?.mediaToday || 0} today
-                  </Badge>
+                  <Badge className="bg-gradient-to-r from-pink-500 to-rose-500 text-white">+{stats?.mediaToday || 0} today</Badge>
                 </div>
 
                 <div className="flex items-center gap-3 p-4 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-fuchsia-50 transition-all border-2 border-transparent hover:border-purple-200 group">
@@ -837,9 +821,7 @@ export default function Dashboard() {
                     <div className="text-2xl font-black text-gray-800">{stats?.healthRecordsTotal || 0}</div>
                   </div>
                   {(stats?.healthAlerts || 0) > 0 && (
-                    <Badge className="bg-gradient-to-r from-rose-500 to-pink-500 text-white">
-                      {stats?.healthAlerts} alerts
-                    </Badge>
+                    <Badge className="bg-gradient-to-r from-rose-500 to-pink-500 text-white">{stats?.healthAlerts} alerts</Badge>
                   )}
                 </div>
 
@@ -885,28 +867,17 @@ export default function Dashboard() {
           0%, 100% { transform: translateY(0px) translateX(0px); }
           50% { transform: translateY(-20px) translateX(10px); }
         }
-        
         @keyframes float-delayed {
           0%, 100% { transform: translateY(0px) translateX(0px); }
           50% { transform: translateY(20px) translateX(-10px); }
         }
-        
         @keyframes float-slow {
           0%, 100% { transform: translateY(0px) translateX(0px) scale(1); }
           50% { transform: translateY(-15px) translateX(15px) scale(1.1); }
         }
-        
-        .animate-float {
-          animation: float 8s ease-in-out infinite;
-        }
-        
-        .animate-float-delayed {
-          animation: float-delayed 10s ease-in-out infinite;
-        }
-        
-        .animate-float-slow {
-          animation: float-slow 12s ease-in-out infinite;
-        }
+        .animate-float { animation: float 8s ease-in-out infinite; }
+        .animate-float-delayed { animation: float-delayed 10s ease-in-out infinite; }
+        .animate-float-slow { animation: float-slow 12s ease-in-out infinite; }
       `}</style>
     </AppShell>
   )

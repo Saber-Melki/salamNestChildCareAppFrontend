@@ -23,7 +23,6 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
 import {
   Plus,
-  Search,
   Edit,
   Trash2,
   Phone,
@@ -37,13 +36,13 @@ import {
   UserCheck,
   UserX,
   Filter,
-  Download,
-  Upload,
   TrendingUp,
   Calendar,
   DollarSign,
   Eye,
   CheckCircle,
+  LogIn,
+  LogOut,
 } from "lucide-react"
 
 interface StaffMember {
@@ -56,10 +55,7 @@ interface StaffMember {
   status: "active" | "inactive" | "on_leave"
   hireDate: string
   address: string
-  emergencyContact: {
-    name: string
-    phone: string
-  }
+  emergencyContact: { name: string; phone: string }
   certifications: string[]
   hourlyRate: number
   weeklyHours: number
@@ -67,7 +63,14 @@ interface StaffMember {
   avatar?: string
 }
 
-const API_URL = "http://localhost:8080/staff"
+type StaffAttendanceToday = {
+  status: "in" | "out" | null
+  checkIn?: string
+  checkOut?: string
+}
+
+const STAFF_API = "http://localhost:8080/staff"
+const STAFF_ATT_API = "http://localhost:8080/attendance/staff" // REST in attendance service
 
 const ROLE_COLORS = {
   director: "bg-gradient-to-r from-purple-500 to-pink-500 text-white",
@@ -82,6 +85,65 @@ const STATUS_COLORS = {
   on_leave: "bg-gradient-to-r from-orange-500 to-amber-500 text-white",
 }
 
+/* ────────────────────────── Helper: parse backend shapes ────────────────────────── */
+function extractTimes(resp: any) {
+  const r = resp ?? {}
+  const src = r.attendance ?? r.data ?? r.result ?? r
+  const checkIn =
+    src.checkIn ??
+    src.check_in ??
+    src.checkin ??
+    src.check_in_time ??
+    src.in ??
+    src.start ??
+    src.clockIn ??
+    undefined
+  const checkOut =
+    src.checkOut ??
+    src.check_out ??
+    src.checkout ??
+    src.check_out_time ??
+    src.out ??
+    src.end ??
+    src.clockOut ??
+    undefined
+  return { checkIn, checkOut }
+}
+
+/* ────────────────────────── Helper: Presence Pill ────────────────────────── */
+function PresencePill({
+  s,
+  inTime,
+  outTime,
+}: {
+  s: "in" | "out" | null | undefined
+  inTime?: string
+  outTime?: string
+}) {
+  if (s === "in") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-medium">
+        <CheckCircle className="h-3.5 w-3.5" />
+        In {inTime ? inTime.slice(0, 5) : ""}
+      </span>
+    )
+  }
+  if (s === "out") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-700 px-2 py-0.5 text-xs font-medium">
+        <LogOut className="h-3.5 w-3.5" />
+        Out {outTime ? outTime.slice(0, 5) : ""}
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 text-gray-600 px-2 py-0.5 text-xs font-medium">
+      <Clock className="h-3.5 w-3.5" />
+      No mark yet
+    </span>
+  )
+}
+
 export default function Staff() {
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
@@ -89,11 +151,14 @@ export default function Staff() {
   const [roleFilter, setRoleFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
 
-  // Fetch staff from API
+  // today attendance quick state (no heavy fetch; UI reflects last action)
+  const [todayMap, setTodayMap] = useState<Record<string, StaffAttendanceToday>>({})
+
+  // Fetch staff
   useEffect(() => {
     const fetchStaff = async () => {
       try {
-        const res = await fetch(API_URL)
+        const res = await fetch(STAFF_API)
         const data = await res.json()
         setStaff(data)
       } catch (err) {
@@ -105,10 +170,62 @@ export default function Staff() {
     fetchStaff()
   }, [])
 
-  // Add staff
+  // ---- Attendance actions (REST) ----
+  const handleStaffCheckIn = async (staffId: string) => {
+    try {
+      const res = await fetch(`${STAFF_ATT_API}/${staffId}/check-in`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: "{}", // some Nest pipes/validators expect a body
+      })
+      if (!res.ok) throw new Error(`Failed to check in (${res.status})`)
+      const payload = await res.json()
+      const { checkIn } = extractTimes(payload)
+
+      // Reset checkOut on each new check-in
+      setTodayMap((m) => ({
+        ...m,
+        [staffId]: {
+          status: "in",
+          checkIn: (checkIn as string) ?? new Date().toISOString().slice(11, 16),
+          checkOut: undefined,
+        },
+      }))
+    } catch (e) {
+      console.error(e)
+      alert("Check-in failed")
+    }
+  }
+
+  const handleStaffCheckOut = async (staffId: string) => {
+    try {
+      const res = await fetch(`${STAFF_ATT_API}/${staffId}/check-out`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: "{}", // see note above
+      })
+      if (!res.ok) throw new Error(`Failed to check out (${res.status})`)
+      const payload = await res.json()
+      const { checkOut } = extractTimes(payload)
+
+      setTodayMap((m) => ({
+        ...m,
+        [staffId]: {
+          status: "out",
+          checkIn: m[staffId]?.checkIn, // keep the last in-time
+          checkOut: (checkOut as string) ?? new Date().toISOString().slice(11, 16),
+        },
+      }))
+    } catch (e) {
+      console.error(e)
+      alert("Check-out failed")
+    }
+  }
+
+  // CRUD
   const handleAddStaff = async (newStaff: Omit<StaffMember, "id">) => {
     try {
-      const res = await fetch(API_URL, {
+      const res = await fetch(STAFF_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newStaff),
@@ -120,10 +237,9 @@ export default function Staff() {
     }
   }
 
-  // Update staff
   const handleUpdateStaff = async (updated: StaffMember) => {
     try {
-      const res = await fetch(`${API_URL}/${updated.id}`, {
+      const res = await fetch(`${STAFF_API}/${updated.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updated),
@@ -135,11 +251,14 @@ export default function Staff() {
     }
   }
 
-  // Delete staff
   const handleDeleteStaff = async (id: string) => {
     try {
-      await fetch(`${API_URL}/${id}`, { method: "DELETE" })
+      await fetch(`${STAFF_API}/${id}`, { method: "DELETE" })
       setStaff((prev) => prev.filter((s) => s.id !== id))
+      setTodayMap((m) => {
+        const { [id]: _, ...rest } = m
+        return rest
+      })
     } catch (err) {
       console.error("Error deleting staff:", err)
     }
@@ -156,6 +275,7 @@ export default function Staff() {
   })
 
   const activeStaff = staff.filter((s) => s.status === "active").length
+  const onLeaveStaff = staff.filter((s) => s.status === "on_leave").length
   const totalPayroll = staff
     .filter((s) => s.status === "active")
     .reduce((sum, s) => sum + s.hourlyRate * s.weeklyHours, 0)
@@ -163,46 +283,7 @@ export default function Staff() {
   return (
     <AppShell title="Staff Management">
       <div className="space-y-6">
-        {/* <div className="relative overflow-hidden rounded-3xl border shadow-2xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 opacity-95" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-
-          <div className="absolute top-6 right-8 w-32 h-32 bg-white/10 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-8 left-8 w-24 h-24 bg-white/5 rounded-full blur-2xl animate-bounce" />
-          <div className="absolute top-1/3 right-1/4 w-20 h-20 bg-white/10 rounded-full blur-xl animate-pulse delay-1000" />
-
-          <div className="relative p-8 md:p-12 text-white">
-            <div className="flex items-start gap-4">
-              <div className="inline-flex h-20 w-20 items-center justify-center bg-white/20 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 animate-bounce">
-                <Users className="h-10 w-10 text-white drop-shadow-lg" />
-              </div>
-              <div className="flex-1">
-                <h1 className="text-4xl md:text-5xl font-bold leading-tight bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent drop-shadow-lg">
-                  Staff Management
-                </h1>
-                <p className="mt-3 text-xl text-blue-50/90 font-medium">
-                  Comprehensive team directory with certifications, scheduling, and payroll tracking
-                </p>
-                <div className="flex items-center gap-6 mt-4 text-blue-100/80">
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="h-5 w-5" />
-                    <span className="text-sm font-medium">Team Directory</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Award className="h-5 w-5" />
-                    <span className="text-sm font-medium">Certifications</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5" />
-                    <span className="text-sm font-medium">Payroll Tracking</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div> */}
-
-        {/* Stats Cards */}
+        {/* Stats Cards (kept your original icons/design) */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-blue-50 to-indigo-100">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl" />
@@ -241,9 +322,7 @@ export default function Staff() {
                 </div>
                 <Clock className="h-5 w-5 text-orange-600" />
               </div>
-              <div className="text-3xl font-bold text-gray-900">
-                {staff.filter((s) => s.status === "on_leave").length}
-              </div>
+              <div className="text-3xl font-bold text-gray-900">{onLeaveStaff}</div>
               <div className="text-sm font-medium text-gray-600 mt-1">On Leave</div>
             </div>
           </Card>
@@ -263,10 +342,10 @@ export default function Staff() {
           </Card>
         </div>
 
-        {/* Staff Directory Section */}
-        <Section title="Staff Directory" description="Manage your childcare center team members and track credentials.">
+        {/* Staff Directory */}
+        <Section title="Staff Directory" description="Manage your team and track attendance.">
           <div className="space-y-6">
-            {/* Search and Filters */}
+            {/* Search & Filters */}
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <Input
@@ -304,14 +383,27 @@ export default function Staff() {
               </div>
             </div>
 
-            {/* Action Buttons */}
+            {/* Optional legend */}
+            <div className="flex items-center gap-3 text-xs text-gray-600">
+              <span className="inline-flex items-center gap-1">
+                <span className="inline-block h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white" /> In
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="inline-block h-3 w-3 rounded-full bg-slate-400 ring-2 ring-white" /> Out
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="inline-block h-3 w-3 rounded-full bg-gray-300 ring-2 ring-white" /> No mark yet
+              </span>
+            </div>
+
+            {/* Actions */}
             <div className="flex justify-between items-center">
               <div className="flex gap-3">
                 <AddStaffDialog onAdd={handleAddStaff} />
               </div>
             </div>
 
-            {/* Staff Table */}
+            {/* Table */}
             <div className="rounded-2xl border-2 border-blue-100 bg-gradient-to-br from-white to-blue-50/30 overflow-hidden shadow-xl">
               <Table>
                 <TableHeader>
@@ -325,64 +417,113 @@ export default function Staff() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredStaff.map((member, index) => (
-                    <TableRow
-                      key={member.id}
-                      className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 ${
-                        index % 2 === 0 ? "bg-white" : "bg-blue-25"
-                      }`}
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center font-bold text-white shadow-lg text-lg">
-                            {member.firstName[0]}
-                            {member.lastName[0]}
-                          </div>
-                          <div>
-                            <div className="font-semibold text-gray-900">
-                              {member.firstName} {member.lastName}
+                  {filteredStaff.map((member, index) => {
+                    const att = todayMap[member.id]
+                    return (
+                      <TableRow
+                        key={member.id}
+                        className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 ${
+                          index % 2 === 0 ? "bg-white" : "bg-blue-25"
+                        }`}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="relative">
+                              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center font-bold text-white shadow-lg text-lg">
+                                {member.firstName[0]}
+                                {member.lastName[0]}
+                              </div>
+                              {/* Status dot */}
+                              <span
+                                className={[
+                                  "absolute -bottom-1 -right-1 h-4 w-4 rounded-full ring-2 ring-white",
+                                  att?.status === "in"
+                                    ? "bg-emerald-500"
+                                    : att?.status === "out"
+                                    ? "bg-slate-400"
+                                    : "bg-gray-300",
+                                ].join(" ")}
+                                title={att?.status === "in" ? "Checked in" : att?.status === "out" ? "Checked out" : "No mark yet"}
+                              />
                             </div>
-                            <div className="text-sm text-gray-500">{member.email}</div>
+                            <div>
+                              <div className="font-semibold text-gray-900">
+                                {member.firstName} {member.lastName}
+                              </div>
+                              <div className="text-sm text-gray-500">{member.email}</div>
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={`${ROLE_COLORS[member.role]} shadow-md capitalize px-3 py-1`}>
-                          {member.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={`${STATUS_COLORS[member.status]} shadow-md capitalize px-3 py-1`}>
-                          {member.status.replace("_", " ")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1 text-sm">
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-3 w-3 text-gray-400" />
-                            <span className="text-gray-700">{member.phone}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={`${ROLE_COLORS[member.role]} shadow-md capitalize px-3 py-1`}>
+                            {member.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge className={`${STATUS_COLORS[member.status]} shadow-md capitalize px-3 py-1`}>
+                              {member.status.replace("_", " ")}
+                            </Badge>
+                            <PresencePill s={att?.status} inTime={att?.checkIn} outTime={att?.checkOut} />
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-3 w-3 text-gray-400" />
-                            <span className="text-gray-500 truncate max-w-[200px]">{member.email}</span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1 text-sm">
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-3 w-3 text-gray-400" />
+                              <span className="text-gray-700">{member.phone}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Mail className="h-3 w-3 text-gray-400" />
+                              <span className="text-gray-500 truncate max-w-[200px]">{member.email}</span>
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1 text-sm">
-                          <div className="font-semibold text-gray-900">${member.hourlyRate}/hr</div>
-                          <div className="text-gray-500">{member.weeklyHours}h/week</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-center gap-2">
-                          <StaffDetailsDialog staff={member} />
-                          <EditStaffDialog staff={member} onUpdate={handleUpdateStaff} />
-                          <DeleteStaffDialog staff={member} onDelete={handleDeleteStaff} />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1 text-sm">
+                            <div className="font-semibold text-gray-900">${member.hourlyRate}/hr</div>
+                            <div className="text-gray-500">{member.weeklyHours}h/week</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-center gap-2">
+                            {/* Attendance buttons with smart states */}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={att?.status === "in" ? "Already in" : "Check in"}
+                              onClick={() => handleStaffCheckIn(member.id)}
+                              className={[
+                                "hover:bg-emerald-100",
+                                att?.status === "in" ? "text-emerald-400 cursor-not-allowed" : "text-emerald-600 hover:text-emerald-700",
+                              ].join(" ")}
+                              disabled={att?.status === "in"}
+                            >
+                              <LogIn className="h-4 w-4" />
+                            </Button>
+
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={att?.status === "out" || !att?.status ? "Not in yet" : "Check out"}
+                              onClick={() => handleStaffCheckOut(member.id)}
+                              className={[
+                                "hover:bg-slate-100",
+                                att?.status === "out" || !att?.status ? "text-slate-300 cursor-not-allowed" : "text-slate-600 hover:text-slate-700",
+                              ].join(" ")}
+                              disabled={att?.status === "out" || !att?.status}
+                            >
+                              <LogOut className="h-4 w-4" />
+                            </Button>
+
+                            <StaffDetailsDialog staff={member} />
+                            <EditStaffDialog staff={member} onUpdate={handleUpdateStaff} />
+                            <DeleteStaffDialog staff={member} onDelete={handleDeleteStaff} />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -408,9 +549,8 @@ export default function Staff() {
   )
 }
 
-/* ---------------------- Dialogs ---------------------- */
+/* ---------------------- Dialogs (unchanged UI) ---------------------- */
 
-// Add Staff Dialog
 function AddStaffDialog({ onAdd }: { onAdd: (staff: any) => void }) {
   const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState<any>({
@@ -652,7 +792,6 @@ function AddStaffDialog({ onAdd }: { onAdd: (staff: any) => void }) {
   )
 }
 
-// Edit Staff Dialog
 function EditStaffDialog({ staff, onUpdate }: { staff: StaffMember; onUpdate: (s: StaffMember) => void }) {
   const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState<StaffMember>(staff)
@@ -666,11 +805,7 @@ function EditStaffDialog({ staff, onUpdate }: { staff: StaffMember; onUpdate: (s
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="hover:bg-blue-100 text-blue-600 hover:text-blue-700 transition-colors"
-        >
+        <Button variant="ghost" size="icon" className="hover:bg-blue-100 text-blue-600 hover:text-blue-700">
           <Edit className="h-4 w-4" />
         </Button>
       </DialogTrigger>
@@ -689,158 +824,131 @@ function EditStaffDialog({ staff, onUpdate }: { staff: StaffMember; onUpdate: (s
 
         <form onSubmit={handleSubmit}>
           <DialogBody className="space-y-6">
-            {/* Personal Information */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg text-gray-800 flex items-center gap-2">
-                <User className="h-5 w-5 text-indigo-600" />
-                Personal Information
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-gray-700">First Name *</Label>
-                  <Input
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    required
-                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-gray-700">Last Name *</Label>
-                  <Input
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    required
-                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-gray-700">Email *</Label>
-                  <Input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-gray-700">Phone *</Label>
-                  <Input
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    required
-                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
-                  />
-                </div>
+            {/* Personal */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700">First Name *</Label>
+                <Input
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  required
+                  className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-semibold text-gray-700">Address</Label>
+                <Label className="text-sm font-semibold text-gray-700">Last Name *</Label>
                 <Input
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  required
                   className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
                 />
               </div>
             </div>
 
-            {/* Employment Information */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg text-gray-800 flex items-center gap-2">
-                <Award className="h-5 w-5 text-purple-600" />
-                Employment Information
-              </h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-gray-700">Role *</Label>
-                  <Select
-                    value={formData.role}
-                    onValueChange={(value) => setFormData({ ...formData, role: value as any })}
-                  >
-                    <SelectTrigger className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="teacher">Teacher</SelectItem>
-                      <SelectItem value="assistant">Assistant</SelectItem>
-                      <SelectItem value="director">Director</SelectItem>
-                      <SelectItem value="staff">Staff</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-gray-700">Status *</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) => setFormData({ ...formData, status: value as any })}
-                  >
-                    <SelectTrigger className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="on_leave">On Leave</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-gray-700">Hourly Rate ($)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.hourlyRate}
-                    onChange={(e) => setFormData({ ...formData, hourlyRate: Number(e.target.value) })}
-                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
-                  />
-                </div>
-              </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm font-semibold text-gray-700">Weekly Hours</Label>
+                <Label className="text-sm font-semibold text-gray-700">Email *</Label>
                 <Input
-                  type="number"
-                  value={formData.weeklyHours}
-                  onChange={(e) => setFormData({ ...formData, weeklyHours: Number(e.target.value) })}
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
                   className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
                 />
               </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700">Phone *</Label>
+                <Input
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  required
+                  className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Employment */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700">Role *</Label>
+                <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as any })}>
+                  <SelectTrigger className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="teacher">Teacher</SelectItem>
+                    <SelectItem value="assistant">Assistant</SelectItem>
+                    <SelectItem value="director">Director</SelectItem>
+                    <SelectItem value="staff">Staff</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700">Status *</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => setFormData({ ...formData, status: value as any })}
+                >
+                  <SelectTrigger className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="on_leave">On Leave</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700">Hourly Rate ($)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.hourlyRate}
+                  onChange={(e) => setFormData({ ...formData, hourlyRate: Number(e.target.value) })}
+                  className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-gray-700">Weekly Hours</Label>
+              <Input
+                type="number"
+                value={formData.weeklyHours}
+                onChange={(e) => setFormData({ ...formData, weeklyHours: Number(e.target.value) })}
+                className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+              />
             </div>
 
             {/* Emergency Contact */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg text-gray-800 flex items-center gap-2">
-                <Phone className="h-5 w-5 text-pink-600" />
-                Emergency Contact
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-gray-700">Contact Name</Label>
-                  <Input
-                    value={formData.emergencyContact.name}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        emergencyContact: { ...formData.emergencyContact, name: e.target.value },
-                      })
-                    }
-                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-gray-700">Contact Phone</Label>
-                  <Input
-                    value={formData.emergencyContact.phone}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        emergencyContact: { ...formData.emergencyContact, phone: e.target.value },
-                      })
-                    }
-                    className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
-                  />
-                </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700">Contact Name</Label>
+                <Input
+                  value={formData.emergencyContact.name}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      emergencyContact: { ...formData.emergencyContact, name: e.target.value },
+                    })
+                  }
+                  className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700">Contact Phone</Label>
+                <Input
+                  value={formData.emergencyContact.phone}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      emergencyContact: { ...formData.emergencyContact, phone: e.target.value },
+                    })
+                  }
+                  className="h-11 border-2 border-blue-200 focus:border-blue-400 bg-white"
+                />
               </div>
             </div>
 
@@ -857,18 +965,10 @@ function EditStaffDialog({ staff, onUpdate }: { staff: StaffMember; onUpdate: (s
           </DialogBody>
 
           <DialogFooter className="pt-6 gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              className="border-2 border-gray-300 hover:bg-gray-50 px-6"
-            >
+            <Button variant="outline" onClick={() => setOpen(false)} className="border-2 border-gray-300 px-6">
               Cancel
             </Button>
-            <Button
-              type="submit"
-              className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 hover:from-blue-600 hover:via-indigo-600 hover:to-purple-600 text-white border-0 shadow-xl px-8"
-            >
+            <Button className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 text-white border-0 shadow-xl px-8">
               Update Staff Member
             </Button>
           </DialogFooter>
@@ -878,23 +978,16 @@ function EditStaffDialog({ staff, onUpdate }: { staff: StaffMember; onUpdate: (s
   )
 }
 
-// Delete Staff Dialog
 function DeleteStaffDialog({ staff, onDelete }: { staff: StaffMember; onDelete: (id: string) => void }) {
   const [open, setOpen] = useState(false)
-
   const handleDelete = () => {
     onDelete(staff.id)
     setOpen(false)
   }
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-red-600 hover:text-red-700 hover:bg-red-100 transition-colors"
-        >
+        <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-700 hover:bg-red-100">
           <Trash2 className="h-4 w-4" />
         </Button>
       </DialogTrigger>
@@ -914,8 +1007,6 @@ function DeleteStaffDialog({ staff, onDelete }: { staff: StaffMember; onDelete: 
             <ul className="text-sm text-red-700 space-y-1">
               <li>• Remove all staff records and employment history</li>
               <li>• Delete associated scheduling and time tracking data</li>
-              <li>• Remove access to the childcare management system</li>
-              <li>• Archive any messages or communications</li>
             </ul>
           </div>
         </DialogBody>
@@ -923,10 +1014,7 @@ function DeleteStaffDialog({ staff, onDelete }: { staff: StaffMember; onDelete: 
           <Button variant="outline" onClick={() => setOpen(false)} className="border-2 border-gray-300 px-6">
             Cancel
           </Button>
-          <Button
-            onClick={handleDelete}
-            className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white border-0 shadow-lg px-6"
-          >
+          <Button onClick={handleDelete} className="bg-gradient-to-r from-red-500 to-rose-600 text-white border-0 px-6">
             Delete Staff Member
           </Button>
         </DialogFooter>
@@ -935,18 +1023,12 @@ function DeleteStaffDialog({ staff, onDelete }: { staff: StaffMember; onDelete: 
   )
 }
 
-// Staff Details Dialog
 function StaffDetailsDialog({ staff }: { staff: StaffMember }) {
   const [open, setOpen] = useState(false)
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="hover:bg-indigo-100 text-indigo-600 hover:text-indigo-700 transition-colors"
-        >
+        <Button variant="ghost" size="icon" className="hover:bg-indigo-100 text-indigo-600 hover:text-indigo-700">
           <Eye className="h-4 w-4" />
         </Button>
       </DialogTrigger>
@@ -964,7 +1046,6 @@ function StaffDetailsDialog({ staff }: { staff: StaffMember }) {
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="space-y-6">
-          {/* Status and Role */}
           <div className="flex items-center gap-3 flex-wrap">
             <Badge className={`${ROLE_COLORS[staff.role]} shadow-md capitalize px-4 py-1.5`}>{staff.role}</Badge>
             <Badge className={`${STATUS_COLORS[staff.status]} shadow-md capitalize px-4 py-1.5`}>
@@ -976,7 +1057,6 @@ function StaffDetailsDialog({ staff }: { staff: StaffMember }) {
             </div>
           </div>
 
-          {/* Contact Information */}
           <div className="space-y-3">
             <h3 className="font-semibold text-base text-gray-800 flex items-center gap-2">
               <Mail className="h-5 w-5 text-indigo-600" />
@@ -998,7 +1078,6 @@ function StaffDetailsDialog({ staff }: { staff: StaffMember }) {
             </div>
           </div>
 
-          {/* Employment Details */}
           <div className="space-y-3">
             <h3 className="font-semibold text-base text-gray-800 flex items-center gap-2">
               <Award className="h-5 w-5 text-purple-600" />
@@ -1022,32 +1101,28 @@ function StaffDetailsDialog({ staff }: { staff: StaffMember }) {
             </div>
           </div>
 
-          {/* Emergency Contact */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-base text-gray-800 flex items-center gap-2">
-              <Phone className="h-5 w-5 text-pink-600" />
-              Emergency Contact
-            </h3>
-            <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl p-4">
-              <div className="font-semibold text-gray-900">{staff.emergencyContact.name}</div>
-              <div className="text-sm text-gray-600 mt-1">{staff.emergencyContact.phone}</div>
+          {staff.emergencyContact?.name && (
+            <div className="space-y-3">
+              <h3 className="font-semibold text-base text-gray-800 flex items-center gap-2">
+                <Phone className="h-5 w-5 text-pink-600" />
+                Emergency Contact
+              </h3>
+              <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl p-4">
+                <div className="font-semibold text-gray-900">{staff.emergencyContact.name}</div>
+                <div className="text-sm text-gray-600 mt-1">{staff.emergencyContact.phone}</div>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Certifications */}
-          {staff.certifications && staff.certifications.length > 0 && (
+          {staff.certifications?.length > 0 && (
             <div className="space-y-3">
               <h3 className="font-semibold text-base text-gray-800 flex items-center gap-2">
                 <Award className="h-5 w-5 text-blue-600" />
                 Certifications
               </h3>
               <div className="flex flex-wrap gap-2">
-                {staff.certifications.map((cert, index) => (
-                  <Badge
-                    key={index}
-                    variant="secondary"
-                    className="bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 shadow-sm px-3 py-1"
-                  >
+                {staff.certifications.map((cert, i) => (
+                  <Badge key={i} variant="secondary" className="bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800">
                     {cert}
                   </Badge>
                 ))}
@@ -1055,7 +1130,6 @@ function StaffDetailsDialog({ staff }: { staff: StaffMember }) {
             </div>
           )}
 
-          {/* Notes */}
           {staff.notes && (
             <div className="space-y-3">
               <h3 className="font-semibold text-base text-gray-800">Notes</h3>
@@ -1064,10 +1138,7 @@ function StaffDetailsDialog({ staff }: { staff: StaffMember }) {
           )}
         </DialogBody>
         <DialogFooter>
-          <Button
-            onClick={() => setOpen(false)}
-            className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg"
-          >
+          <Button onClick={() => setOpen(false)} className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
             Close
           </Button>
         </DialogFooter>

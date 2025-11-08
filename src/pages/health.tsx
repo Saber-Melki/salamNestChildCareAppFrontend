@@ -75,69 +75,21 @@ interface HealthRecord {
 }
 
 const NOTE_TYPES = [
-  {
-    value: "Incident",
-    label: "🚨 Incident Report",
-    color: "from-red-500 to-pink-500",
-    bgColor: "bg-red-50 dark:bg-red-950/30",
-    icon: AlertTriangle,
-  },
-  {
-    value: "Medication",
-    label: "💊 Medication",
-    color: "from-blue-500 to-indigo-500",
-    bgColor: "bg-blue-50 dark:bg-blue-950/30",
-    icon: Pill,
-  },
-  {
-    value: "Allergy",
-    label: "⚠️ Allergy Update",
-    color: "from-orange-500 to-amber-500",
-    bgColor: "bg-orange-50 dark:bg-orange-950/30",
-    icon: Shield,
-  },
-  {
-    value: "Immunization",
-    label: "💉 Immunization",
-    color: "from-green-500 to-emerald-500",
-    bgColor: "bg-green-50 dark:bg-green-950/30",
-    icon: Syringe,
-  },
-  {
-    value: "Checkup",
-    label: "🩺 Health Checkup",
-    color: "from-purple-500 to-violet-500",
-    bgColor: "bg-purple-50 dark:bg-purple-950/30",
-    icon: Stethoscope,
-  },
-  {
-    value: "Observation",
-    label: "👁️ Observation",
-    color: "from-teal-500 to-cyan-500",
-    bgColor: "bg-teal-50 dark:bg-teal-950/30",
-    icon: Eye,
-  },
-  {
-    value: "Temperature",
-    label: "🌡️ Temperature Check",
-    color: "from-yellow-500 to-orange-500",
-    bgColor: "bg-yellow-50 dark:bg-yellow-950/30",
-    icon: Thermometer,
-  },
-  {
-    value: "Injury",
-    label: "🩹 Injury Report",
-    color: "from-red-600 to-rose-600",
-    bgColor: "bg-red-50 dark:bg-red-950/30",
-    icon: AlertTriangle,
-  },
+  { value: "Incident", label: "🚨 Incident Report", color: "from-red-500 to-pink-500", bgColor: "bg-red-50 dark:bg-red-950/30", icon: AlertTriangle },
+  { value: "Medication", label: "💊 Medication", color: "from-blue-500 to-indigo-500", bgColor: "bg-blue-50 dark:bg-blue-950/30", icon: Pill },
+  { value: "Allergy", label: "⚠️ Allergy Update", color: "from-orange-500 to-amber-500", bgColor: "bg-orange-50 dark:bg-orange-950/30", icon: Shield },
+  { value: "Immunization", label: "💉 Immunization", color: "from-green-500 to-emerald-500", bgColor: "bg-green-50 dark:bg-green-950/30", icon: Syringe },
+  { value: "Checkup", label: "🩺 Health Checkup", color: "from-purple-500 to-violet-500", bgColor: "bg-purple-50 dark:bg-purple-950/30", icon: Stethoscope },
+  { value: "Observation", label: "👁️ Observation", color: "from-teal-500 to-cyan-500", bgColor: "bg-teal-50 dark:bg-teal-950/30", icon: Eye },
+  { value: "Temperature", label: "🌡️ Temperature Check", color: "from-yellow-500 to-orange-500", bgColor: "bg-yellow-50 dark:bg-yellow-950/30", icon: Thermometer },
+  { value: "Injury", label: "🩹 Injury Report", color: "from-red-600 to-rose-600", bgColor: "bg-red-50 dark:bg-red-950/30", icon: AlertTriangle },
 ]
 
 export default function Health() {
   const [createRecordDialogOpen, setCreateRecordDialogOpen] = useState(false)
   const [noteDialogOpen, setNoteDialogOpen] = useState(false)
   const [editingNote, setEditingNote] = useState<HealthNote | null>(null)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false) // note delete
   const [noteToDelete, setNoteToDelete] = useState<HealthNote | null>(null)
   const [medicalRecordOpen, setMedicalRecordOpen] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState<HealthRecord | null>(null)
@@ -149,6 +101,10 @@ export default function Health() {
   const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([])
   const [children, setChildren] = useState<ChildRow[]>([])
   const [loading, setLoading] = useState(true)
+
+  // ✅ NEW: record-level delete dialog state
+  const [deleteRecordOpen, setDeleteRecordOpen] = useState(false)
+  const [recordToDelete, setRecordToDelete] = useState<HealthRecord | null>(null)
 
   const [recordFormData, setRecordFormData] = useState({
     child: "",
@@ -166,78 +122,75 @@ export default function Health() {
     status: "active" as "active" | "resolved" | "pending",
   })
 
-  // Get children that don't have medical records yet
   const childrenWithoutRecords = children.filter(
     (child) => !healthRecords.find((record) => record.child === `${child.firstName} ${child.lastName}`),
   )
 
-  // ----------- API Functions -------------
-  // ----------- API Functions -------------
+  // ---------------- API FUNCTIONS ----------------
 
-// Fetch all health records
-const fetchHealthRecords = async (): Promise<HealthRecord[]> => {
-  const res = await fetch("http://localhost:8080/health");
-  if (!res.ok) throw new Error("Failed to fetch health records");
-  return res.json();
-};
+  const fetchHealthRecords = async (): Promise<HealthRecord[]> => {
+    const res = await fetch("http://localhost:8080/health")
+    if (!res.ok) throw new Error(await res.text())
+    return res.json()
+  }
 
-// Create a new health record
-const createHealthRecord = async (record: Partial<HealthRecord>) => {
-  const res = await fetch("http://localhost:8080/health", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(record),
-  });
-  if (!res.ok) throw new Error("Failed to create health record");
-  return res.json();
-};
+  const createHealthRecord = async (record: Partial<HealthRecord>) => {
+    const res = await fetch("http://localhost:8080/health", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(record),
+    })
+    if (!res.ok) throw new Error(await res.text())
+    return res.json()
+  }
 
-// Update an existing health record
-const updateHealthRecord = async (id: string, record: Partial<HealthRecord>) => {
-  const res = await fetch(`http://localhost:8080/health/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(record),
-  });
-  if (!res.ok) throw new Error("Failed to update health record");
-  return res.json();
-};
+  const updateHealthRecord = async (id: string, record: Partial<HealthRecord>) => {
+    const res = await fetch(`http://localhost:8080/health/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(record),
+    })
+    if (!res.ok) throw new Error(await res.text())
+    return res.json()
+  }
 
-// Create a health note for a specific health record
-const createHealthNote = async (healthId: string, note: Partial<HealthNote>) => {
-  const res = await fetch(`http://localhost:8080/health/${healthId}/notes`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(note),
-  });
-};
+  const createHealthNote = async (healthId: string, note: Partial<HealthNote>) => {
+    const res = await fetch(`http://localhost:8080/health/${healthId}/notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(note),
+    })
+    if (!res.ok) throw new Error(await res.text())
+    return res.json()
+  }
 
-// Update a specific health note
-const updateHealthNote = async (healthId: string, noteId: string, note: Partial<HealthNote>) => {
-  const res = await fetch(`http://localhost:8080/health/${healthId}/notes/${noteId}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(note),
-  });
-  if (!res.ok) throw new Error("Failed to update health note");
-  return res.json();
-};
+  const updateHealthNote = async (healthId: string, noteId: string, note: Partial<HealthNote>) => {
+    const res = await fetch(`http://localhost:8080/health/${healthId}/notes/${noteId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(note),
+    })
+    if (!res.ok) throw new Error(await res.text())
+    return res.json()
+  }
 
+  const deleteHealthNote = async (healthId: string, noteId: string) => {
+    const res = await fetch(`http://localhost:8080/health/${healthId}/notes/${noteId}`, { method: "DELETE" })
+    if (!res.ok) throw new Error(await res.text())
+    return res.json()
+  }
 
-// Delete a specific health note
-const deleteHealthNote = async (healthId: string, noteId: string) => {
-  const res = await fetch(`http://localhost:8080/health/${healthId}/notes/${noteId}`, {
-    method: "DELETE",
-  });
-  if (!res.ok) throw new Error("Failed to delete health note");
-  return res.json();
-};
+  // ✅ NEW: delete a whole health record
+  const deleteHealthRecord = async (id: string) => {
+    const res = await fetch(`http://localhost:8080/health/${id}`, { method: "DELETE" })
+    if (!res.ok) throw new Error(await res.text())
+    return true
+  }
 
-  // ----------- PDF Export Function -------------
+  // ---------------- PDF Export ----------------
   const exportHealthRecordsPDF = async () => {
     setExportingPDF(true)
     setExportSuccess(false)
-
     try {
       healthPDFService.generateHealthRecordsPDF(filteredRecords, "SalamNest")
       setExportSuccess(true)
@@ -250,7 +203,7 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
     }
   }
 
-  // ----------- Load Data -------------
+  // ---------------- Load Data ----------------
   const loadData = async () => {
     try {
       setLoading(true)
@@ -266,16 +219,12 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
 
   useEffect(() => {
     loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ----------- Handlers -------------
+  // ---------------- Handlers ----------------
   const resetRecordForm = () => {
-    setRecordFormData({
-      child: "",
-      allergies: "None",
-      immunizations: "Up to date",
-      emergency: "",
-    })
+    setRecordFormData({ child: "", allergies: "None", immunizations: "Up to date", emergency: "" })
   }
 
   const resetNoteForm = () => {
@@ -301,8 +250,8 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
       description: note.description,
       date: note.date,
       followUp: note.followUp || "",
-      priority: note.priority || "medium",
-      status: note.status || "active",
+      priority: (note.priority || "medium") as any,
+      status: (note.status || "active") as any,
     })
     setNoteDialogOpen(true)
   }
@@ -324,7 +273,7 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
     setDeleteDialogOpen(true)
   }
 
-  const confirmDelete = async () => {
+  const confirmDeleteNote = async () => {
     if (noteToDelete && selectedRecord) {
       try {
         await deleteHealthNote(selectedRecord.id, noteToDelete.id)
@@ -337,9 +286,29 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
     setDeleteDialogOpen(false)
   }
 
+  // ✅ NEW: record delete handlers
+  const openDeleteRecord = (record: HealthRecord) => {
+    setRecordToDelete(record)
+    setDeleteRecordOpen(true)
+  }
+
+  const confirmDeleteRecord = async () => {
+    try {
+      if (!recordToDelete) return
+      await deleteHealthRecord(recordToDelete.id)
+      if (medicalRecordOpen) setMedicalRecordOpen(false) // close details if open
+      await loadData()
+    } catch (e) {
+      console.error(e)
+      alert("Failed to delete medical record")
+    } finally {
+      setDeleteRecordOpen(false)
+      setRecordToDelete(null)
+    }
+  }
+
   const handleCreateRecord = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-
     try {
       await createHealthRecord(recordFormData)
       await loadData()
@@ -353,19 +322,16 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
 
   const handleSubmitNote = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-
     try {
       if (!selectedRecord) {
         alert("Please select a medical record!")
         return
       }
-
       if (editingNote) {
         await updateHealthNote(selectedRecord.id, editingNote.id, noteFormData)
       } else {
         await createHealthNote(selectedRecord.id, noteFormData)
       }
-
       await loadData()
       setNoteDialogOpen(false)
       resetNoteForm()
@@ -376,13 +342,14 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
     }
   }
 
-  // Filter and search functionality
+  // ---------------- Filter + Search ----------------
   const filteredRecords = healthRecords.filter((record) => {
     const matchesSearch = record.child.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesFilter = filterType === "all" || record.notes.some((note) => note.noteType === filterType)
     return matchesSearch && matchesFilter
   })
 
+  // ---------------- Helpers ----------------
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
@@ -414,25 +381,17 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
     return type?.label.split(" ")[0] || "📝"
   }
 
-  // Calculate stats
+  // ---------------- Stats ----------------
   const totalNotes = healthRecords.reduce((acc, record) => acc + record.notes.length, 0)
-  const activeNotes = healthRecords.reduce(
-    (acc, record) => acc + record.notes.filter((n) => n.status === "active").length,
-    0,
-  )
-  const highPriorityNotes = healthRecords.reduce(
-    (acc, record) => acc + record.notes.filter((n) => n.priority === "high").length,
-    0,
-  )
+  const activeNotes = healthRecords.reduce((acc, record) => acc + record.notes.filter((n) => n.status === "active").length, 0)
+  const highPriorityNotes = healthRecords.reduce((acc, record) => acc + record.notes.filter((n) => n.priority === "high").length, 0)
 
   return (
     <AppShell title="Health Records">
-      {/* Enhanced Hero Header */}
+      {/* Hero Header */}
       <div className="relative overflow-hidden rounded-3xl border border-emerald-200 dark:border-emerald-800 shadow-2xl mb-8">
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 dark:from-emerald-900 dark:via-teal-900 dark:to-cyan-900 opacity-95 dark:opacity-90" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-
-        {/* Floating decorative elements */}
         <div className="absolute top-4 right-4 w-20 h-20 bg-white/10 rounded-full blur-xl animate-pulse" />
         <div className="absolute bottom-6 left-6 w-16 h-16 bg-white/5 rounded-full blur-lg animate-bounce" />
         <div className="absolute top-1/2 right-1/3 w-12 h-12 bg-white/10 rounded-full blur-md animate-pulse animation-delay-1000" />
@@ -527,12 +486,12 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
         </Card>
       </div>
 
-      {/* Enhanced Section */}
+      {/* Section */}
       <Section
         title="Children Medical Records"
         description="Create a medical record for each child, then add notes to track their health history."
       >
-        {/* Enhanced Controls */}
+        {/* Controls */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="flex gap-3">
             <Button
@@ -573,7 +532,7 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
             </Button>
           </div>
 
-          {/* Search and Filter */}
+          {/* Search + Filter */}
           <div className="flex gap-3 flex-1 max-w-md ml-auto">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
@@ -631,7 +590,7 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredRecords.map((record) => {
-              const recentNotes = record.notes
+              const recentNotes = [...record.notes]
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                 .slice(0, 3)
               const hasHighPriorityNotes = record.notes.some((note) => note.priority === "high")
@@ -647,15 +606,30 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
                   }`}
                   onClick={() => openMedicalRecord(record)}
                 >
+                  {/* ✅ NEW: record delete button on card */}
+                  <div className="absolute top-3 right-3 z-10">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openDeleteRecord(record)
+                      }}
+                      className="h-9 w-9 p-0 hover:bg-red-100 dark:hover:bg-red-950/50 rounded-full"
+                      title="Delete medical record"
+                      aria-label="Delete medical record"
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+                    </Button>
+                  </div>
+
                   {/* Priority Indicator */}
                   {hasHighPriorityNotes && (
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-pink-500 animate-pulse" />
                   )}
 
                   <CardContent className="p-6">
-                    <br></br>
                     <div className="flex items-start gap-4 mb-4">
-                      <br></br>
                       <div className="relative">
                         <img
                           src="/child.jpg"
@@ -663,10 +637,10 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
                           className="w-16 h-16 rounded-full border-4 border-white dark:border-gray-800 shadow-lg"
                         />
                         {hasActiveNotes && (
-                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-red-500 to-pink-500 rounded-full animate-ping" />
-                        )}
-                        {hasActiveNotes && (
-                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" />
+                          <>
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-red-500 to-pink-500 rounded-full animate-ping" />
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" />
+                          </>
                         )}
                       </div>
                       <div className="flex-1">
@@ -784,7 +758,6 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
                     </Button>
                   </CardContent>
 
-                  {/* Hover Effect Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-teal-500/0 to-cyan-500/0 group-hover:from-emerald-500/5 group-hover:via-teal-500/5 group-hover:to-cyan-500/5 transition-all duration-500 pointer-events-none" />
                 </Card>
               )
@@ -912,7 +885,7 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
               <div className="flex items-center gap-4">
                 <img
                   src="/child.jpg"
-                  alt={selectedRecord?.child}
+                  alt={selectedRecord?.child || "child"}
                   className="w-16 h-16 rounded-full border-4 border-emerald-500 dark:border-emerald-700 shadow-lg"
                 />
                 <div>
@@ -924,13 +897,30 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
                   </DialogDescription>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setMedicalRecordOpen(false)}
-                className="hover:bg-red-100 dark:hover:bg-red-950/50"
-              >
-              </Button>
+
+              <div className="flex items-center gap-2">
+                {/* ✅ Optional: record delete from dialog */}
+                {selectedRecord && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openDeleteRecord(selectedRecord)}
+                    className="hover:bg-red-100 dark:hover:bg-red-950/50"
+                    title="Delete this medical record"
+                  >
+                    <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setMedicalRecordOpen(false)}
+                  className="hover:bg-red-100 dark:hover:bg-red-950/50"
+                  aria-label="Close medical record"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
 
             {/* Medical Info Cards */}
@@ -982,12 +972,11 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
           <DialogBody className="overflow-y-auto max-h-[calc(90vh-300px)] pr-4">
             {/* Timeline View */}
             <div className="relative">
-              {/* Timeline Line */}
               <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-emerald-500 via-teal-500 to-cyan-500 dark:from-emerald-700 dark:via-teal-700 dark:to-cyan-700" />
 
               <div className="space-y-6">
                 {selectedRecord?.notes.length ? (
-                  selectedRecord.notes
+                  [...selectedRecord.notes]
                     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                     .map((note) => {
                       const noteType = NOTE_TYPES.find((t) => t.value === note.noteType)
@@ -995,12 +984,10 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
 
                       return (
                         <div key={note.id} className="relative pl-20">
-                          {/* Timeline Node */}
                           <div className="absolute left-4 top-4 w-9 h-9 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-700 dark:to-teal-700 flex items-center justify-center border-4 border-white dark:border-gray-900 shadow-lg z-10">
                             <Icon className="h-4 w-4 text-white" />
                           </div>
 
-                          {/* Note Card */}
                           <Card className={`border-2 transition-all duration-300 hover:shadow-xl ${noteType?.bgColor}`}>
                             <CardContent className="p-6">
                               <div className="flex items-start justify-between mb-4">
@@ -1010,7 +997,7 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
                                       variant="outline"
                                       className={`font-semibold px-3 py-1 text-base ${noteType?.bgColor}`}
                                     >
-                                      {noteType?.label}
+                                      {noteType?.label || note.noteType}
                                     </Badge>
                                     <Badge className={`text-xs ${getPriorityColor(note.priority || "medium")}`}>
                                       {note.priority || "medium"} priority
@@ -1087,9 +1074,7 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
                     <p className="text-gray-500 dark:text-gray-400 mb-4">Start building this child's medical history</p>
                     <Button
                       onClick={() => {
-                        if (selectedRecord) {
-                          openAddNoteDialog(selectedRecord)
-                        }
+                        if (selectedRecord) openAddNoteDialog(selectedRecord)
                       }}
                       className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
                     >
@@ -1105,9 +1090,7 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
           <DialogFooter className="pt-6 gap-3 border-t border-emerald-200 dark:border-emerald-800">
             <Button
               onClick={() => {
-                if (selectedRecord) {
-                  openAddNoteDialog(selectedRecord)
-                }
+                if (selectedRecord) openAddNoteDialog(selectedRecord)
               }}
               className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg hover:shadow-xl"
             >
@@ -1281,7 +1264,7 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Note Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="border-0 shadow-2xl bg-gradient-to-br from-white to-red-50/30 dark:from-gray-900 dark:to-red-950/30">
           <AlertDialogHeader>
@@ -1292,8 +1275,7 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
               Delete Medical Note
             </AlertDialogTitle>
             <AlertDialogDescription className="text-base text-gray-600 dark:text-gray-400 mt-2">
-              Are you sure you want to permanently delete this medical note? This action cannot be undone and will
-              remove all associated medical information.
+              Are you sure you want to permanently delete this medical note?
               <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
                 <strong>Note Type:</strong> {noteToDelete?.noteType}
                 <br />
@@ -1306,10 +1288,40 @@ const deleteHealthNote = async (healthId: string, noteId: string) => {
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmDelete}
+              onClick={confirmDeleteNote}
               className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-300"
             >
               Delete Note
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ✅ NEW — Delete Record Confirmation */}
+      <AlertDialog open={deleteRecordOpen} onOpenChange={setDeleteRecordOpen}>
+        <AlertDialogContent className="border-0 shadow-2xl bg-gradient-to-br from-white to-red-50/30 dark:from-gray-900 dark:to-red-950/30">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-3 text-xl text-red-700 dark:text-red-400">
+              <div className="p-2 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl shadow-lg">
+                <Trash2 className="h-5 w-5 text-white" />
+              </div>
+              Delete Medical Record
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base text-gray-600 dark:text-gray-400 mt-2">
+              This will permanently delete the medical record for{" "}
+              <strong>{recordToDelete?.child}</strong> and <strong>all associated notes</strong>. This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-3">
+            <AlertDialogCancel className="border-2 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteRecord}
+              className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              Delete Record
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
