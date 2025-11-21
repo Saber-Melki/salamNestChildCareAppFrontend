@@ -33,11 +33,19 @@ import { Button } from "./ui/button"
 import { Card } from "./ui/card"
 import { Input } from "./ui/input"
 import { Badge } from "./ui/badge"
-import { useRBAC } from "../contexts/rbac"
+import { useRBAC, Role } from "../contexts/rbac" // ⬅️ includes Role
 import { useBranding } from "../contexts/branding"
 import { useTheme } from "../contexts/theme"
 import { getAccentTheme } from "./theme-utils"
 import { cn } from "../lib/utils"
+
+// 🔹 Small helper to call fetch with credentials
+async function withCreds(url: string, init?: RequestInit) {
+  return fetch(url, {
+    credentials: "include",
+    ...init,
+  })
+}
 
 export function AuroraBG() {
   return (
@@ -247,9 +255,31 @@ function Header({ title }: { title?: string }) {
   const theme = getAccentTheme(accent)
   const [q, setQ] = React.useState("")
 
-  const RoleButton = ({ r, label }: { r: any; label: string }) => (
+  // 🔹 Logout handler (clears httpOnly cookies server-side + client storage)
+  const handleLogout = async () => {
+    try {
+      await withCreds("http://localhost:8080/auth/logout", { method: "GET" })
+    } catch (e) {
+      console.error("Logout request failed (will still redirect):", e)
+    } finally {
+      try {
+        localStorage.clear()
+        sessionStorage.clear()
+      } catch {
+        // ignore
+      }
+      // Hard redirect to login to kill any in-memory state
+      window.location.replace("/login")
+    }
+  }
+
+  // 🔹 RoleButton: set role + navigate to correct interface
+  const RoleButton = ({ r, label, to }: { r: Role; label: string; to: string }) => (
     <button
-      onClick={() => setRole(r)}
+      onClick={() => {
+        setRole(r)
+        navigate(to)
+      }}
       className={cn(
         "px-2 py-1 text-xs rounded border border-border hover:bg-neutral-100 dark:hover:bg-neutral-800 text-foreground",
         role === r && "ring-2 ring-offset-2 ring-offset-background " + theme.ring,
@@ -289,16 +319,19 @@ function Header({ title }: { title?: string }) {
           <span className="sr-only">Notifications</span>
         </Button>
 
+        {/* Role quick-switch buttons (hidden/commented out from UI) */}
+        {/*
         <div className="hidden lg:flex items-center gap-2 ml-2">
-          <RoleButton r="admin" label="Admin" />
-          <RoleButton r="staff" label="Staff" />
-          <RoleButton r="parent" label="Parent" />
+          <RoleButton r="admin" label="Administrateur" to="/dashboard" />
+          <RoleButton r="staff" label="Staff" to="/staff" />
+          <RoleButton r="parent" label="Parent" to="/parent-portal" />
         </div>
+        */}
 
         <Button
           variant="outline"
           size="sm"
-          onClick={() => navigate("/logout")}
+          onClick={handleLogout}
           className="gap-2 bg-transparent"
           title="Sign out"
         >

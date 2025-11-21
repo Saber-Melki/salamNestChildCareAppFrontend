@@ -5,7 +5,18 @@ import { useNavigate } from "react-router-dom"
 import { BrandingProvider, useBranding } from "../contexts/branding"
 import { getAccentTheme } from "../components/theme-utils"
 import { cn } from "../lib/utils"
-import { Mail, Lock, Eye, EyeOff, Sparkles, ShieldCheck, ArrowRight, User, Users, Settings } from "lucide-react"
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Sparkles,
+  ShieldCheck,
+  ArrowRight,
+  User,
+  Users,
+  Settings,
+} from "lucide-react"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { Button } from "../components/ui/button"
@@ -22,11 +33,10 @@ function ParticleEffect() {
           className="absolute bg-white/30 rounded-full blur-sm animate-float-random opacity-0"
           style={{
             width: `${Math.random() * 3 + 1}px`,
-            height: `${Math.random() * 3 + 1}px`,
+            height: `${Math.random() * 3 + 3}px`,
             left: `${Math.random() * 100}%`,
             top: `${Math.random() * 100}%`,
             animationDelay: `${Math.random() * 10}s`,
-            // animationDuration handled by tailwind.config.js for animate-float-random
           }}
         />
       ))}
@@ -39,7 +49,6 @@ function AuroraBG() {
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
       <div className="absolute -top-24 -right-24 h-80 w-80 rounded-full blur-3xl opacity-30 bg-gradient-to-br from-emerald-400 to-lime-300 animate-slow-pulse" />
       <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full blur-3xl opacity-30 bg-gradient-to-br from-rose-300 to-pink-300 animate-slow-pulse delay-700" />
-      {/* Enhanced grid pattern with subtle parallax */}
       <div className="absolute inset-0 [background-image:radial-gradient(hsl(0_0%_0%/.04)_1px,transparent_1px)] [background-size:18px_18px] transform-gpu translate-z-0 animate-grid-pan" />
     </div>
   )
@@ -49,6 +58,7 @@ function LoginScreen() {
   const nav = useNavigate()
   const { accent } = useBranding()
   const theme = getAccentTheme(accent)
+
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [showPw, setShowPw] = React.useState(false)
@@ -58,6 +68,8 @@ function LoginScreen() {
   const login = async (r?: Role) => {
     setPending(true)
     try {
+      const selectedRole: Role = r || role
+
       const response = await fetch("http://localhost:8080/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -65,7 +77,7 @@ function LoginScreen() {
         body: JSON.stringify({
           email,
           password,
-          role: r || role,
+          role: selectedRole,
         }),
       })
 
@@ -77,10 +89,19 @@ function LoginScreen() {
       console.log("✅ Login response:", data)
       console.log("🎉 Login successful, cookies should now be set by backend")
 
-      console.log("✅ Login successful, redirecting...")
-      nav("/dashboard", { replace: true })
-      console.log("➡️ Navigation triggered")
+      // 🔹 Save role so RBAC/sidebar/header know what to show
+      localStorage.setItem("role", selectedRole)
 
+      // 🔹 Redirect based on role
+      let target = "/dashboard"
+      if (selectedRole === "parent") {
+        target = "/parent-portal"
+      } else if (selectedRole === "staff") {
+        target = "/staff"
+      } // admin stays /dashboard
+
+      console.log("✅ Login successful, redirecting to:", target)
+      nav(target, { replace: true })
     } catch (err: any) {
       console.error("❌ Login failed:", err)
       alert("Login failed: " + err.message)
@@ -92,24 +113,48 @@ function LoginScreen() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black">
       <AuroraBG />
-      <ParticleEffect /> {/* Add the new particle effect */}
+      <ParticleEffect />
 
-      {/* Floating geometric shapes - Enhanced animations and variety */}
+      {/* Floating geometric shapes */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-20 left-10 w-20 h-20 bg-gradient-to-br from-emerald-400/20 to-lime-300/20 rounded-full blur-xl animate-float-fade" style={{ animationDelay: '0s' }} />
-        <div className="absolute top-40 right-20 w-32 h-32 bg-gradient-to-br from-violet-400/15 to-fuchsia-300/15 rounded-3xl blur-2xl animate-float-fade" style={{ animationDelay: '2s' }} />
-        <div className="absolute bottom-32 left-1/4 w-16 h-16 bg-gradient-to-br from-rose-400/25 to-pink-300/25 rounded-full blur-lg animate-float-fade" style={{ animationDelay: '4s' }} />
-        <div className="absolute top-1/3 right-1/3 w-24 h-24 bg-gradient-to-br from-cyan-400/20 to-sky-300/20 rounded-full blur-xl animate-float-fade" style={{ animationDelay: '6s' }} />
-        <div className="absolute bottom-10 right-1/2 w-28 h-28 bg-gradient-to-br from-purple-400/15 to-indigo-300/15 rounded-full blur-2xl animate-float-fade" style={{ animationDelay: '8s' }} /> {/* Added another shape */}
+        <div
+          className="absolute top-20 left-10 w-20 h-20 bg-gradient-to-br from-emerald-400/20 to-lime-300/20 rounded-full blur-xl animate-float-fade"
+          style={{ animationDelay: "0s" }}
+        />
+        <div
+          className="absolute top-40 right-20 w-32 h-32 bg-gradient-to-br from-violet-400/15 to-fuchsia-300/15 rounded-3xl blur-2xl animate-float-fade"
+          style={{ animationDelay: "2s" }}
+        />
+        <div
+          className="absolute bottom-32 left-1/4 w-16 h-16 bg-gradient-to-br from-rose-400/25 to-pink-300/25 rounded-full blur-lg animate-float-fade"
+          style={{ animationDelay: "4s" }}
+        />
+        <div
+          className="absolute top-1/3 right-1/3 w-24 h-24 bg-gradient-to-br from-cyan-400/20 to-sky-300/20 rounded-full blur-xl animate-float-fade"
+          style={{ animationDelay: "6s" }}
+        />
+        <div
+          className="absolute bottom-10 right-1/2 w-28 h-28 bg-gradient-to-br from-purple-400/15 to-indigo-300/15 rounded-full blur-2xl animate-float-fade"
+          style={{ animationDelay: "8s" }}
+        />
 
-        {/* Floating cards - Enhanced visual depth */}
-        <div className="absolute top-16 right-16 transform rotate-12 opacity-60 animate-card-float" style={{ animationDelay: '1s' }}>
+        {/* Floating cards */}
+        <div
+          className="absolute top-16 right-16 transform rotate-12 opacity-60 animate-card-float"
+          style={{ animationDelay: "1s" }}
+        >
           <div className="w-32 h-20 bg-white/10 dark:bg-black/10 backdrop-blur-sm border border-white/20 dark:border-white/10 rounded-xl shadow-lg hover:shadow-xl transition-shadow" />
         </div>
-        <div className="absolute bottom-20 left-16 transform -rotate-6 opacity-40 animate-card-float" style={{ animationDelay: '3s' }}>
+        <div
+          className="absolute bottom-20 left-16 transform -rotate-6 opacity-40 animate-card-float"
+          style={{ animationDelay: "3s" }}
+        >
           <div className="w-28 h-16 bg-white/10 dark:bg-black/10 backdrop-blur-sm border border-white/20 dark:border-white/10 rounded-xl shadow-lg hover:shadow-xl transition-shadow" />
         </div>
-        <div className="absolute top-1/4 left-1/4 transform rotate-3 opacity-30 animate-card-float" style={{ animationDelay: '5s' }}>
+        <div
+          className="absolute top-1/4 left-1/4 transform rotate-3 opacity-30 animate-card-float"
+          style={{ animationDelay: "5s" }}
+        >
           <div className="w-24 h-14 bg-white/10 dark:bg-black/10 backdrop-blur-sm border border-white/20 dark:border-white/10 rounded-lg shadow-md hover:shadow-lg transition-shadow" />
         </div>
       </div>
@@ -117,23 +162,17 @@ function LoginScreen() {
       <div className="relative z-10 grid min-h-screen grid-cols-1 lg:grid-cols-2">
         {/* Left: Hero Image Section */}
         <div className="relative flex items-center justify-center p-8 lg:p-12">
-          {/* Main hero image container */}
           <div className="relative w-full max-w-lg perspective-1000">
-            {/* Floating glow effect behind image */}
             <div className="absolute -inset-8 bg-gradient-to-r from-emerald-500/20 via-lime-400/20 to-cyan-400/20 rounded-3xl blur-3xl animate-glow-pulse" />
 
-            {/* Main image card - More pronounced 3D tilt on hover */}
             <div className="relative group hover:rotate-x-3 hover:rotate-y-3 transition-transform duration-500 ease-in-out">
               <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/30 to-lime-400/30 rounded-3xl blur-sm group-hover:blur-md transition-all duration-500" />
               <div className="relative rounded-3xl overflow-hidden bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl">
-                
                 <img
                   src="/garderie.jpg"
                   alt="Happy children in classroom"
                   className="w-full h-[60vh] object-cover object-center transform group-hover:scale-105 transition-transform duration-700 ease-out"
                 />
-
-                {/* Overlay content - Enhanced gradient */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                   <div className="flex items-center gap-3 mb-3">
@@ -153,15 +192,17 @@ function LoginScreen() {
                     </div>
                   </div>
                   <p className="text-sm text-white/90 leading-relaxed drop-shadow-sm">
-                    Empowering childcare centers with seamless management, <br />real-time family engagement, and secure
-                    operations.
+                    Empowering childcare centers with seamless management, <br />
+                    real-time family engagement, and secure operations.
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Floating feature cards - More dynamic placement and animation */}
-            <div className="absolute -top-4 -right-4 transform rotate-6 animate-feature-card-1" style={{ animationDelay: '0s' }}>
+            <div
+              className="absolute -top-4 -right-4 transform rotate-6 animate-feature-card-1"
+              style={{ animationDelay: "0s" }}
+            >
               <div className="bg-white/15 dark:bg-black/15 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-2xl p-4 shadow-xl hover:shadow-2xl transition-shadow">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5 text-emerald-400 animate-bounce-icon" />
@@ -169,18 +210,23 @@ function LoginScreen() {
                 </div>
               </div>
             </div>
-            <br />
 
-            <div className="absolute -bottom-4 -left-4 transform -rotate-3 animate-feature-card-2" style={{ animationDelay: '1.5s' }}>
+            <div
+              className="absolute -bottom-4 -left-4 transform -rotate-3 animate-feature-card-2"
+              style={{ animationDelay: "1.5s" }}
+            >
               <div className="bg-white/15 dark:bg-black/15 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-2xl p-4 shadow-xl hover:shadow-2xl transition-shadow">
                 <div className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-violet-400 animate-bounce-icon delay-200" />
-                  <span className="text-sm font-medium text-gray-800 dark:text-white">Family Focused</span>
+                  <span className="text-sm font-medium text-gray-800 dark:text:white">Family Focused</span>
                 </div>
               </div>
             </div>
 
-            <div className="absolute top-1/2 -left-8 transform -translate-y-1/2 rotate-12 animate-feature-card-3" style={{ animationDelay: '3s' }}>
+            <div
+              className="absolute top-1/2 -left-8 transform -translate-y-1/2 rotate-12 animate-feature-card-3"
+              style={{ animationDelay: "3s" }}
+            >
               <div className="bg-white/15 dark:bg-black/15 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-2xl p-3 shadow-xl hover:shadow-2xl transition-shadow">
                 <Sparkles className="h-6 w-6 text-amber-400 animate-spin-slow" />
               </div>
@@ -190,12 +236,10 @@ function LoginScreen() {
 
         {/* Right: Login Form */}
         <div className="relative flex items-center justify-center p-6 lg:p-12">
-          {/* Floating elements around form */}
           <div className="absolute top-20 left-8 w-12 h-12 bg-gradient-to-br from-emerald-400/20 to-lime-300/20 rounded-2xl rotate-45 animate-float-fade-slow delay-300" />
           <div className="absolute bottom-32 right-12 w-8 h-8 bg-gradient-to-br from-violet-400/25 to-fuchsia-300/25 rounded-full animate-float-fade-slow delay-700" />
 
           <div className="w-full max-w-md relative z-10">
-            {/* Mobile logo */}
             <div className="mb-8 flex items-center justify-center gap-3 text-gray-900 dark:text-white">
               <div className="relative">
                 <img
@@ -210,16 +254,11 @@ function LoginScreen() {
               <div className="text-xl font-bold drop-shadow-md">SalamNest</div>
             </div>
 
-            {/* Main form container with enhanced glass effect */}
             <div className="relative">
-              {/* Glow effect - More prominent and layered */}
               <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500/15 via-violet-500/15 to-rose-500/15 rounded-3xl blur-2xl animate-glow-pulse-form" />
               <div className="absolute -inset-2 bg-gradient-to-r from-emerald-500/5 via-violet-500/5 to-rose-500/5 rounded-3xl blur-xl animate-glow-pulse-form delay-500" />
 
-
-              {/* Form card - Stronger glassmorphism and subtle inner shadow */}
               <div className="relative rounded-2xl bg-white/20 dark:bg-black/20 backdrop-blur-2xl border border-white/30 dark:border-white/15 shadow-2xl p-8 transform-gpu hover:shadow-3xl transition-shadow duration-300">
-                {/* Header with floating icon */}
                 <div className="text-center mb-8 relative">
                   <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
                     <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-lime-400 rounded-2xl flex items-center justify-center shadow-lg rotate-12 animate-float-bounce">
@@ -227,8 +266,12 @@ function LoginScreen() {
                     </div>
                   </div>
                   <br />
-                  <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mt-4 drop-shadow-md">Welcome back</h2>
-                  <p className="text-gray-600 dark:text-gray-300 mt-2 drop-shadow-sm">Sign in to your childcare dashboard</p>
+                  <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mt-4 drop-shadow-md">
+                    Welcome back
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-300 mt-2 drop-shadow-sm">
+                    Sign in to your childcare dashboard
+                  </p>
                 </div>
 
                 <form
@@ -238,7 +281,7 @@ function LoginScreen() {
                     login()
                   }}
                 >
-                  {/* Email field with floating label effect - Enhanced focus glow */}
+                  {/* Email */}
                   <div className="relative group">
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-lime-400/20 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity blur-sm" />
                     <div className="relative">
@@ -255,35 +298,49 @@ function LoginScreen() {
                     </div>
                   </div>
 
-                  {/* Password field */}
-                  <div className="relative group">
-                    <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/20 to-fuchsia-400/20 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity blur-sm" />
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-violet-500 transition-colors" />
-                      <Input
-                        id="password"
-                        type={showPw ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter your password"
-                        className="pl-12 pr-12 h-12 bg-white/50 dark:bg-white/10 backdrop-blur border-white/30 dark:border-white/15 focus:border-violet-500/50 focus:ring-violet-500/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
-                        required
-                        minLength={4}
-                      />
+                  {/* Password + Forgot */}
+                  <div className="space-y-2">
+                    <div className="relative group">
+                      <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/20 to-fuchsia-400/20 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity blur-sm" />
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-violet-500 transition-colors" />
+                        <Input
+                          id="password"
+                          type={showPw ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="Enter your password"
+                          className="pl-12 pr-12 h-12 bg-white/50 dark:bg-white/10 backdrop-blur border-white/30 dark:border-white/15 focus:border-violet-500/50 focus:ring-violet-500/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                          required
+                          minLength={4}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPw((s) => !s)}
+                          className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                          aria-label={showPw ? "Hide password" : "Show password"}
+                        >
+                          {showPw ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
                       <button
                         type="button"
-                        onClick={() => setShowPw((s) => !s)}
-                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                        aria-label={showPw ? "Hide password" : "Show password"}
+                        onClick={() => nav("/verify-reset-code")}
+                        className="text-xs font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 underline-offset-2 hover:underline"
                       >
-                        {showPw ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        Forgot password?
                       </button>
                     </div>
                   </div>
 
-                  {/* Role selection with enhanced styling and hover effects */}
+                  {/* Role selection */}
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-200">Select your role</Label>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                      Select your role
+                    </Label>
                     <div className="grid grid-cols-3 gap-3">
                       {(
                         [
@@ -303,16 +360,22 @@ function LoginScreen() {
                               "relative group flex flex-col items-center gap-2 rounded-xl p-4 text-xs font-medium transition-all duration-300",
                               "bg-white/40 dark:bg-black/40 backdrop-blur border border-white/40 dark:border-white/20 hover:bg-white/60 dark:hover:bg-black/60",
                               active && "ring-2 ring-offset-2 ring-offset-transparent",
-                              active && r.color === "emerald" && "ring-emerald-500/60 bg-emerald-50/80 dark:bg-emerald-900/40",
-                              active && r.color === "violet" && "ring-violet-500/60 bg-violet-50/80 dark:bg-violet-900/40",
-                              active && r.color === "pink" && "ring-rose-500/60 bg-rose-50/80 dark:bg-rose-900/40", // Changed rose to pink for consistency
-                              "hover:scale-[1.03] active:scale-[0.97] hover:shadow-lg", // Added hover scale and shadow
+                              active &&
+                                r.color === "emerald" &&
+                                "ring-emerald-500/60 bg-emerald-50/80 dark:bg-emerald-900/40",
+                              active &&
+                                r.color === "violet" &&
+                                "ring-violet-500/60 bg-violet-50/80 dark:bg-violet-900/40",
+                              active &&
+                                r.color === "pink" &&
+                                "ring-rose-500/60 bg-rose-50/80 dark:bg-rose-900/40",
+                              "hover:scale-[1.03] active:scale-[0.97] hover:shadow-lg",
                             )}
                             aria-pressed={active}
                           >
                             <Icon
                               className={cn(
-                                "h-5 w-5 transition-colors group-hover:scale-110", // Icon bounce on hover
+                                "h-5 w-5 transition-colors group-hover:scale-110",
                                 active && r.color === "emerald" && "text-emerald-600 dark:text-emerald-300",
                                 active && r.color === "violet" && "text-violet-600 dark:text-violet-300",
                                 active && r.color === "pink" && "text-rose-600 dark:text-rose-300",
@@ -338,7 +401,6 @@ function LoginScreen() {
                     </div>
                   </div>
 
-                  {/* Enhanced sign in button with liquid-like hover effect */}
                   <Button
                     type="submit"
                     className={cn(
@@ -347,7 +409,7 @@ function LoginScreen() {
                       theme.gradFrom,
                       theme.gradTo,
                       "hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98]",
-                      "dark:from-gray-700 dark:to-gray-900", // Dark mode button styling
+                      "dark:from-gray-700 dark:to-gray-900",
                     )}
                     disabled={pending}
                   >
@@ -366,15 +428,17 @@ function LoginScreen() {
                       )}
                     </div>
                   </Button>
-                </form>                
+                </form>
               </div>
             </div>
 
-            {/* Bottom CTA */}
             <div className="mt-8 text-center">
               <p className="text-sm text-gray-600 dark:text-gray-300">
                 Need help getting started?{" "}
-                <a href="https://colonybyte.com/en/contact" className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium underline">
+                <a
+                  href="https://colonybyte.com/en/contact"
+                  className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium underline"
+                >
                   Contact our support team
                 </a>
               </p>

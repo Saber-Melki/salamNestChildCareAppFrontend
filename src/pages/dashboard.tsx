@@ -78,11 +78,10 @@ interface QuickStats {
 function StunningHero({
   stats,
   loading,
-  onLogout,
 }: {
   stats: DashboardStats | null
   loading: boolean
-  onLogout: () => void
+  // onLogout?: () => void   // ⬅️ COMMENTED: no longer used
 }) {
   const navigate = useNavigate()
   return (
@@ -104,7 +103,8 @@ function StunningHero({
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#fff2_1px,transparent_1px),linear-gradient(to_bottom,#fff2_1px,transparent_1px)] bg-[size:32px_32px] opacity-30" />
 
       <div className="relative p-8 md:p-12 text-white">
-        {/* Top-right Logout */}
+        {/* Top-right Logout (COMMENTED OUT) */}
+        {/*
         <div className="absolute right-4 top-4">
           <Button
             onClick={onLogout}
@@ -116,6 +116,7 @@ function StunningHero({
             Logout
           </Button>
         </div>
+        */}
 
         <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
           <div className="inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-white/20 backdrop-blur-xl border-2 border-white/30 shadow-2xl">
@@ -272,6 +273,7 @@ export default function Dashboard() {
   const withCreds = (url: string, init?: RequestInit) =>
     fetch(url, { credentials: "include", cache: "no-store", ...(init || {}) })
 
+  /*
   // Logout handler (clears httpOnly cookies server-side)
   const handleLogout = async () => {
     try {
@@ -288,6 +290,7 @@ export default function Dashboard() {
       window.location.replace("/login")
     }
   }
+  */
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -574,7 +577,8 @@ export default function Dashboard() {
   return (
     <AppShell>
       <div className="grid gap-6">
-        <StunningHero stats={stats} loading={loading} onLogout={handleLogout} />
+        {/* ⬇️ Logout now handled globally in AppShell header; hero just shows stats */}
+        <StunningHero stats={stats} loading={loading} />
 
         {/* Connection Status */}
         {error ? (

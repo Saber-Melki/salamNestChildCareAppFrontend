@@ -24,6 +24,8 @@ import Health from "./pages/health";
 import { RBACProvider } from "./contexts/rbac";
 import RouteError from "./routes/RouteError";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import VerifyResetCodePage from "./pages/VerifyResetCodePage";
 
 // ⬇️ add these two files (see previous message for page code)
 
@@ -33,6 +35,10 @@ const router = createBrowserRouter([
   { path: "/logout", element: <Navigate to="/login" replace />, errorElement: <RouteError /> },
 
   // NEW: public reset page the email links to
+    { path: "/verify-reset-code", element: <VerifyResetCodePage />, errorElement: <RouteError /> },
+
+    { path: "/forgot-password", element: <ForgotPasswordPage />, errorElement: <RouteError /> },
+
   { path: "/reset-password", element: <ResetPasswordPage />, errorElement: <RouteError /> },
 
   // Private routes (inside App)
