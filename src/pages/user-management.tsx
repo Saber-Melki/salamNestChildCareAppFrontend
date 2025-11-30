@@ -31,8 +31,6 @@ import {
   Shield,
   Users,
   Filter,
-  Download,
-  Upload,
   Eye,
   Baby,
   GraduationCap,
@@ -44,20 +42,33 @@ import {
   Save,
 } from "lucide-react"
 
+type UserRole = "admin" | "staff" | "parent"
+
+// Shape used in the UI
 interface User {
-  id?: string
+  id: number
+  first_name: string
+  last_name: string
+  email: string
+  role: UserRole
+  url_img: string
+  phone: string
+}
+
+// Shape used when sending data to backend (no id)
+interface UserPayload {
   first_name: string
   last_name: string
   email: string
   password?: string
-  role: "admin" | "staff" | "parent"
+  role: UserRole
   url_img: string
   phone: string
 }
 
 const API_URL = "http://localhost:8080/users"
 
-const ROLE_COLORS = {
+const ROLE_COLORS: Record<UserRole, string> = {
   admin:
     "bg-gradient-to-r from-purple-500/10 to-violet-500/10 text-purple-700 border-purple-200/50 dark:from-purple-500/20 dark:to-violet-500/20 dark:text-purple-300 dark:border-purple-700/50",
   staff:
@@ -66,16 +77,18 @@ const ROLE_COLORS = {
     "bg-gradient-to-r from-emerald-500/10 to-green-500/10 text-emerald-700 border-emerald-200/50 dark:from-emerald-500/20 dark:to-green-500/20 dark:text-emerald-300 dark:border-emerald-700/50",
 }
 
-const ROLE_ICONS = {
+const ROLE_ICONS: Record<UserRole, React.ComponentType<any>> = {
   admin: Settings,
   staff: GraduationCap,
   parent: Baby,
 }
 
+/* ───────────────────────────── Add User ───────────────────────────── */
+
 function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
-  const [formData, setFormData] = React.useState<User>({
+  const [formData, setFormData] = React.useState<UserPayload>({
     first_name: "",
     last_name: "",
     email: "",
@@ -106,6 +119,8 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
           url_img: "",
           phone: "",
         })
+      } else {
+        console.error("Failed to create user", await response.text())
       }
     } catch (error) {
       console.error("Error adding user:", error)
@@ -222,7 +237,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
                 <Label htmlFor="role">User Role *</Label>
                 <Select
                   value={formData.role}
-                  onValueChange={(value) => setFormData({ ...formData, role: value as "admin" | "staff" | "parent" })}
+                  onValueChange={(value) => setFormData({ ...formData, role: value as UserRole })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -279,23 +294,43 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
   )
 }
 
+/* ───────────────────────────── Edit User ───────────────────────────── */
+
 function EditUserDialog({ user, onUserUpdated }: { user: User; onUserUpdated: () => void }) {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
-  const [formData, setFormData] = React.useState<User>(user)
+  const [formData, setFormData] = React.useState<UserPayload>({
+    ...user,
+    password: "",
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+
+    // Front guard: avoid /users/NaN
+    if (user.id === undefined || user.id === null || Number.isNaN(Number(user.id))) {
+      console.error("[EditUserDialog] Invalid user.id:", user.id)
+      alert("Internal error: invalid user id")
+      setLoading(false)
+      return
+    }
+
+    // Don't send empty password if not changing it
+    const { password, ...rest } = formData
+    const payloadToSend = password ? formData : rest
+
     try {
-const response = await fetch(`${API_URL}/${Number(user.id)}`, {
-  method: "PUT",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(formData),
-})
+      const response = await fetch(`${API_URL}/${user.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payloadToSend),
+      })
       if (response.ok) {
         setOpen(false)
         onUserUpdated()
+      } else {
+        console.error("Failed to update user", await response.text())
       }
     } catch (error) {
       console.error("Error updating user:", error)
@@ -387,6 +422,18 @@ const response = await fetch(`${API_URL}/${Number(user.id)}`, {
                   className="transition-all focus:ring-2 focus:ring-purple-500/20"
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit_password">New Password (optional)</Label>
+                <Input
+                  id="edit_password"
+                  type="password"
+                  value={formData.password ?? ""}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="Leave empty to keep current password"
+                  className="transition-all focus:ring-2 focus:ring-purple-500/20"
+                />
+              </div>
             </div>
 
             {/* Role */}
@@ -399,7 +446,7 @@ const response = await fetch(`${API_URL}/${Number(user.id)}`, {
                 <Label htmlFor="edit_role">User Role *</Label>
                 <Select
                   value={formData.role}
-                  onValueChange={(value) => setFormData({ ...formData, role: value as "admin" | "staff" | "parent" })}
+                  onValueChange={(value) => setFormData({ ...formData, role: value as UserRole })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -455,6 +502,8 @@ const response = await fetch(`${API_URL}/${Number(user.id)}`, {
     </Dialog>
   )
 }
+
+/* ───────────────────────────── User Details ───────────────────────────── */
 
 function UserDetailsDialog({ user }: { user: User }) {
   const [open, setOpen] = React.useState(false)
@@ -552,11 +601,20 @@ function UserDetailsDialog({ user }: { user: User }) {
   )
 }
 
+/* ───────────────────────────── Delete User ───────────────────────────── */
+
 function DeleteUserDialog({ user, onUserDeleted }: { user: User; onUserDeleted: () => void }) {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
 
   const handleDelete = async () => {
+    // Guard against bad id
+    if (user.id === undefined || user.id === null || Number.isNaN(Number(user.id))) {
+      console.error("[DeleteUserDialog] Invalid user.id:", user.id)
+      alert("Internal error: invalid user id")
+      return
+    }
+
     setLoading(true)
     try {
       const response = await fetch(`${API_URL}/${user.id}`, {
@@ -565,6 +623,8 @@ function DeleteUserDialog({ user, onUserDeleted }: { user: User; onUserDeleted: 
       if (response.ok) {
         setOpen(false)
         onUserDeleted()
+      } else {
+        console.error("Failed to delete user", await response.text())
       }
     } catch (error) {
       console.error("Error deleting user:", error)
@@ -641,6 +701,8 @@ function DeleteUserDialog({ user, onUserDeleted }: { user: User; onUserDeleted: 
   )
 }
 
+/* ───────────────────────────── Main Page ───────────────────────────── */
+
 export default function UserManagement() {
   const { can } = useRBAC()
   const [users, setUsers] = React.useState<User[]>([])
@@ -654,7 +716,19 @@ export default function UserManagement() {
       const response = await fetch(API_URL)
       if (response.ok) {
         const data = await response.json()
-        setUsers(data)
+        // 🔥 Map backend shape (user_id, ...) → frontend shape (id, ...)
+        const mapped: User[] = (data as any[]).map((u) => ({
+          id: u.id ?? u.user_id, // supports both shapes if ever changed
+          first_name: u.first_name,
+          last_name: u.last_name,
+          email: u.email,
+          role: u.role as UserRole,
+          url_img: u.url_img ?? "",
+          phone: u.phone ?? "",
+        }))
+        setUsers(mapped)
+      } else {
+        console.error("Failed to fetch users", await response.text())
       }
     } catch (error) {
       console.error("Error fetching users:", error)

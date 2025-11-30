@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useEffect } from "react"
@@ -19,9 +18,6 @@ import {
   Play,
   Film,
   Sparkles,
-  Grid3X3,
-  List,
-  Search,
   Lock,
   Globe,
 } from "lucide-react"
@@ -46,6 +42,8 @@ import {
 } from "../components/ui/alert-dialog"
 import { AppShell, Section } from "../components/app-shell"
 
+const API_BASE = "http://localhost:8080"
+
 type MediaItem = {
   id: string
   type: "image" | "video"
@@ -62,10 +60,10 @@ type Album = {
   id: string
   name: string
   description: string
-  coverImage: string
-  createdDate: string
   itemCount: number
   isPublic: boolean
+  coverImage?: string
+  createdDate?: string
 }
 
 export default function Media() {
@@ -81,9 +79,7 @@ export default function Media() {
   const [itemToDelete, setItemToDelete] = React.useState<MediaItem | null>(null)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isLoading, setIsLoading] = React.useState(false)
-  const [aiAssistantOpen, setAiAssistantOpen] = React.useState(false)
   const [viewingItem, setViewingItem] = React.useState<MediaItem | null>(null)
-
 
   const [uploadFormData, setUploadFormData] = React.useState({
     files: [] as File[],
@@ -102,6 +98,7 @@ export default function Media() {
 
   const resetUploadForm = () =>
     setUploadFormData({ files: [], albumId: "", title: "", description: "", tags: "", shareWith: [] })
+
   const resetAlbumForm = () => setAlbumFormData({ name: "", description: "", isPublic: true })
 
   // ===== Fetch albums & media =====
@@ -109,7 +106,7 @@ export default function Media() {
     const fetchAlbums = async () => {
       setIsLoading(true)
       try {
-        const res = await fetch("http://localhost:8080/media/albums")
+        const res = await fetch(`${API_BASE}/media/albums`)
         if (!res.ok) throw new Error(await res.text())
         const data = await res.json()
         setAlbums(Array.isArray(data) ? data : [data])
@@ -125,8 +122,8 @@ export default function Media() {
       try {
         const url =
           selectedAlbum === "all"
-            ? "http://localhost:8080/media/items"
-            : `http://localhost:8080/media/items?albumId=${selectedAlbum}`
+            ? `${API_BASE}/media/items`
+            : `${API_BASE}/media/items?albumId=${selectedAlbum}`
 
         const res = await fetch(url)
         if (!res.ok) throw new Error(await res.text())
@@ -150,6 +147,8 @@ export default function Media() {
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!uploadFormData.files.length || !uploadFormData.albumId) return
+
     setIsLoading(true)
     const formData = new FormData()
     formData.append("file", uploadFormData.files[0])
@@ -159,13 +158,27 @@ export default function Media() {
     formData.append("tags", uploadFormData.tags)
 
     try {
-      const res = await fetch("http://localhost:8080/media/items", {
+      const res = await fetch(`${API_BASE}/media/items`, {
         method: "POST",
         body: formData,
       })
       if (!res.ok) throw new Error(await res.text())
-      const savedItems = await res.json()
+      const savedItems: MediaItem[] = await res.json()
+
+      // add new items to UI
       setMediaItems((prev) => [...prev, ...savedItems])
+
+      // update album itemCount locally
+      if (uploadFormData.albumId && savedItems.length > 0) {
+        setAlbums((prev) =>
+          prev.map((a) =>
+            a.id === uploadFormData.albumId
+              ? { ...a, itemCount: (a.itemCount ?? 0) + savedItems.length }
+              : a,
+          ),
+        )
+      }
+
       resetUploadForm()
       setUploadDialogOpen(false)
     } catch (err) {
@@ -179,13 +192,13 @@ export default function Media() {
     e.preventDefault()
     setIsLoading(true)
     try {
-      const res = await fetch("http://localhost:8080/media/albums", {
+      const res = await fetch(`${API_BASE}/media/albums`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(albumFormData),
       })
       if (!res.ok) throw new Error(await res.text())
-      const savedAlbum = await res.json()
+      const savedAlbum: Album = await res.json()
       setAlbums((prev) => [...prev, savedAlbum])
       resetAlbumForm()
       setAlbumDialogOpen(false)
@@ -202,14 +215,30 @@ export default function Media() {
     setEditAlbumDialogOpen(true)
   }
 
-  const handleUpdateAlbum = (e: React.FormEvent) => {
+  // 🔧 now actually calls backend PUT /media/albums/:id
+  const handleUpdateAlbum = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (editingAlbum) {
-      setAlbums((prev) => prev.map((a) => (a.id === editingAlbum.id ? { ...a, ...albumFormData } : a)))
+    if (!editingAlbum) return
+
+    setIsLoading(true)
+    try {
+      const res = await fetch(`${API_BASE}/media/albums/${editingAlbum.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(albumFormData),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      const updated: Album = await res.json()
+
+      setAlbums((prev) => prev.map((a) => (a.id === updated.id ? { ...a, ...updated } : a)))
+      setEditAlbumDialogOpen(false)
+      setEditingAlbum(null)
+      resetAlbumForm()
+    } catch (err) {
+      console.error("Error updating album:", err)
+    } finally {
+      setIsLoading(false)
     }
-    setEditingAlbum(null)
-    resetAlbumForm()
-    setEditAlbumDialogOpen(false)
   }
 
   const handleDeleteItem = (item: MediaItem) => {
@@ -217,15 +246,36 @@ export default function Media() {
     setDeleteDialogOpen(true)
   }
 
-  const confirmDelete = () => {
-    if (itemToDelete) {
-      setMediaItems((prev) => prev.filter((item) => item.id !== itemToDelete.id))
-      setAlbums((prev) =>
-        prev.map((a) => (a.id === itemToDelete.albumId ? { ...a, itemCount: Math.max(0, a.itemCount - 1) } : a)),
-      )
-      setItemToDelete(null)
+  // 🔧 now calls backend DELETE /media/items/:id
+  const confirmDelete = async () => {
+    if (!itemToDelete) {
+      setDeleteDialogOpen(false)
+      return
     }
-    setDeleteDialogOpen(false)
+
+    try {
+      const res = await fetch(`${API_BASE}/media/items/${itemToDelete.id}`, {
+        method: "DELETE",
+      })
+      if (!res.ok) throw new Error(await res.text())
+      const result = await res.json()
+
+      if (result?.success) {
+        setMediaItems((prev) => prev.filter((item) => item.id !== itemToDelete.id))
+        setAlbums((prev) =>
+          prev.map((a) =>
+            a.id === itemToDelete.albumId
+              ? { ...a, itemCount: Math.max(0, (a.itemCount ?? 0) - 1) }
+              : a,
+          ),
+        )
+      }
+    } catch (err) {
+      console.error("Failed to delete media:", err)
+    } finally {
+      setItemToDelete(null)
+      setDeleteDialogOpen(false)
+    }
   }
 
   // Filter items based on search query
@@ -247,6 +297,7 @@ export default function Media() {
   // ===== Render =====
   return (
     <AppShell title="Media Sharing">
+      {/* Hero header (same design) */}
       <div className="relative overflow-hidden rounded-3xl border-2 border-white/20 shadow-2xl mb-8 group">
         <div className="absolute inset-0 bg-gradient-to-br from-violet-600  to-pink-600 opacity-95" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
@@ -296,10 +347,9 @@ export default function Media() {
       </div>
 
       <Section title="Photos & Videos" description="Capture and share precious moments securely with families.">
-        {/* Enhanced Control Panel */}
+        {/* Control Panel */}
         <div className="bg-gradient-to-r from-white via-purple-50/50 to-pink-50/50 rounded-3xl border-2 border-purple-100/50 p-6 mb-8 shadow-lg backdrop-blur-sm">
           <div className="flex flex-col lg:flex-row gap-6">
-            {/* Action Buttons */}
             <div className="flex gap-4">
               <Button
                 onClick={() => setUploadDialogOpen(true)}
@@ -319,36 +369,41 @@ export default function Media() {
               </Button>
             </div>
 
-            {/* Search and Filters */}
             <div className="flex gap-4 ml-auto">
-
               <Select value={selectedAlbum} onValueChange={setSelectedAlbum}>
-              <SelectTrigger className="w-56 h-12 border-2 border-purple-200 focus:border-purple-400">
+                <SelectTrigger className="w-56 h-12 border-2 border-purple-200 focus:border-purple-400">
                   {selectedAlbum === "all" ? "All Albums" : albums.find((a) => a.id === selectedAlbum)?.name}
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Albums</SelectItem>
                   {albums.map((album) => (
                     <SelectItem key={album.id} value={album.id} className="hover:bg-purple-50">
-                    {album.name}
+                      {album.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
-                <Button
-              variant="outline"
-              onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
-              className="border-2 border-purple-200 hover:bg-purple-50"
-                >
-              {viewMode === "grid" ? " List" : " Grid"}
-                </Button>
-          </div>
+              <Input
+                placeholder="Search media..."
+                className="h-12 border-2 border-purple-200 focus:border-purple-400 bg-white/90 backdrop-blur-sm"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+
+              <Button
+                variant="outline"
+                onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+                className="border-2 border-purple-200 hover:bg-purple-50"
+              >
+                {viewMode === "grid" ? "List" : "Grid"}
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Enhanced Stats Header */}
-        <div className="mb-8 bg-gradient-to-r from-purple-50 via-pink-50 to-rose-50 rounded-3xl p-8 border-2 border-purple-100/50 shadow-lg">
+        {/* Stats Header */}
+        <div className="mb-4 bg-gradient-to-r from-purple-50 via-pink-50 to-rose-50 rounded-3xl p-8 border-2 border-purple-100/50 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-2xl font-bold text-gray-800 mb-2">
@@ -392,6 +447,40 @@ export default function Media() {
           </div>
         </div>
 
+        {/* Album bar */}
+        {albums.length > 0 && (
+          <div className="mb-8 flex gap-4 overflow-x-auto pb-2">
+            <button
+              onClick={() => setSelectedAlbum("all")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium whitespace-nowrap ${
+                selectedAlbum === "all"
+                  ? "bg-purple-600 text-white border-purple-600"
+                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              All media
+              <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">{mediaItems.length}</span>
+            </button>
+
+            {albums.map((album) => (
+              <button
+                key={album.id}
+                onClick={() => setSelectedAlbum(album.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium whitespace-nowrap ${
+                  selectedAlbum === album.id
+                    ? "bg-purple-600 text-white border-purple-600"
+                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                }`}
+              >
+                {album.isPublic ? "🌍" : "🔒"} {album.name}
+                <span className="rounded-full bg-black/5 px-2 py-0.5 text-xs">
+                  {album.itemCount ?? 0}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Loading State */}
         {isLoading && (
           <div className="text-center py-16">
@@ -402,7 +491,7 @@ export default function Media() {
           </div>
         )}
 
-        {/* Enhanced Media Display */}
+        {/* Media Display */}
         {!isLoading && (
           <>
             {viewMode === "grid" ? (
@@ -414,16 +503,21 @@ export default function Media() {
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
                     <div className="aspect-square relative overflow-hidden">
-                      <img
-                        src="/galerie.jpg"
-                        alt={item.title || ""}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
+                      {item.type === "image" ? (
+                        <img
+                          src={item.url}
+                          alt={item.title || ""}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                        />
+                      ) : (
+                        <video
+                          src={item.url}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 bg-black"
+                        />
+                      )}
 
-                      {/* Gradient Overlay */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                      {/* Type Indicator */}
                       <div className="absolute top-4 left-4">
                         {item.type === "video" ? (
                           <Badge className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-xl flex items-center gap-2 px-3 py-1.5 text-sm font-semibold">
@@ -438,7 +532,6 @@ export default function Media() {
                         )}
                       </div>
 
-                      {/* Action Buttons */}
                       <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
                         <Button
                           size="sm"
@@ -458,7 +551,6 @@ export default function Media() {
                         </Button>
                       </div>
 
-                      {/* Content Overlay */}
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-6 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
                         <h4 className="font-bold text-white text-base truncate mb-2">{item.title || "Untitled"}</h4>
                         <div className="flex items-center justify-between text-sm text-white/90">
@@ -486,11 +578,18 @@ export default function Media() {
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
                     <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 shadow-xl border-2 border-white/50">
-                      <img
-                        src="/galerie.jpg"
-                        alt={item.title || ""}
-                        className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
-                      />
+                      {item.type === "image" ? (
+                        <img
+                          src={item.url}
+                          alt={item.title || ""}
+                          className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                        />
+                      ) : (
+                        <video
+                          src={item.url}
+                          className="w-full h-full object-cover hover:scale-110 transition-transform duration-500 bg-black"
+                        />
+                      )}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-4 mb-3">
@@ -551,7 +650,7 @@ export default function Media() {
           </>
         )}
 
-        {/* Enhanced Empty State */}
+        {/* Empty State */}
         {!isLoading && filteredItems.length === 0 && (
           <div className="text-center py-20 bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50 rounded-3xl border-2 border-purple-100/50 shadow-lg">
             <div className="w-40 h-40 bg-gradient-to-br from-purple-100 via-pink-100 to-rose-100 rounded-full mx-auto mb-8 flex items-center justify-center shadow-xl">
@@ -570,7 +669,7 @@ export default function Media() {
             <div className="flex gap-4 justify-center">
               <Button
                 onClick={() => setUploadDialogOpen(true)}
-                className="bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 hover:from-violet-600 hover:via-purple-600 hover:to-fuchsia-600 text-white border-0 shadow-xl hover:shadow-2xl transition-all duration-300 px-8 py-3 text-lg font-semibold"
+                className="bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 hover:from-violet-600 hover:via-purple-600 hover:to-fuchsia-600 text-white border-0 shadow-2xl transition-all duration-300 px-8 py-3 text-lg font-semibold"
               >
                 <Upload className="h-6 w-6 mr-2" />
                 Upload Your First Media
@@ -599,7 +698,7 @@ export default function Media() {
                 <DialogBody className="p-2 sm:p-4 md:p-6 flex justify-center items-center">
                   {viewingItem.type === "image" ? (
                     <img
-                      src="/galerie.jpg" // Using the hardcoded image as in the original component
+                      src={viewingItem.url}
                       alt={viewingItem.title || ""}
                       className="w-full h-auto max-h-[75vh] object-contain rounded-xl"
                     />
@@ -616,7 +715,9 @@ export default function Media() {
                 </DialogBody>
                 {viewingItem.description && (
                   <DialogFooter className="p-6 bg-black/20 border-t border-white/10">
-                    <DialogDescription className="text-base text-white/80">{viewingItem.description}</DialogDescription>
+                    <DialogDescription className="text-base text-white/80">
+                      {viewingItem.description}
+                    </DialogDescription>
                   </DialogFooter>
                 )}
               </div>
@@ -624,8 +725,7 @@ export default function Media() {
           </DialogContent>
         </Dialog>
 
-
-        {/* Enhanced Upload Dialog */}
+        {/* Upload Dialog */}
         <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
           <DialogContent className="max-w-3xl border-0 shadow-2xl bg-gradient-to-br from-white via-purple-50/30 to-pink-50/30 backdrop-blur-sm">
             <DialogHeader className="pb-8">
@@ -752,7 +852,7 @@ export default function Media() {
           </DialogContent>
         </Dialog>
 
-        {/* Enhanced Album Dialog */}
+        {/* Create Album Dialog */}
         <Dialog open={albumDialogOpen} onOpenChange={setAlbumDialogOpen}>
           <DialogContent className="max-w-2xl border-0 shadow-2xl bg-gradient-to-br from-white via-green-50/30 to-emerald-50/30 backdrop-blur-sm">
             <DialogHeader className="pb-8">
@@ -839,7 +939,7 @@ export default function Media() {
           </DialogContent>
         </Dialog>
 
-        {/* Enhanced Delete Confirmation */}
+        {/* Delete Confirmation */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent className="border-0 shadow-2xl bg-gradient-to-br from-white via-red-50/30 to-pink-50/30 backdrop-blur-sm">
             <AlertDialogHeader>
@@ -872,28 +972,12 @@ export default function Media() {
 
       {/* Custom CSS for animations */}
       <style>{`
-        /* @jsxRuntime classic */
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-        }
-        @keyframes float-delayed {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-15px); }
-        }
-        @keyframes float-slow {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
-        }
-        .animate-float {
-          animation: float 3s ease-in-out infinite;
-        }
-        .animate-float-delayed {
-          animation: float-delayed 4s ease-in-out infinite;
-        }
-        .animate-float-slow {
-          animation: float-slow 5s ease-in-out infinite;
-        }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+        @keyframes float-delayed { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-15px); } }
+        @keyframes float-slow { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        .animate-float-delayed { animation: float-delayed 4s ease-in-out infinite; }
+        .animate-float-slow { animation: float-slow 5s ease-in-out infinite; }
       `}</style>
     </AppShell>
   )

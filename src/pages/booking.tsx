@@ -26,6 +26,7 @@ import {
   Mail,
   Check,
   AlertCircle,
+  Pencil,
 } from "lucide-react"
 import { format } from "../utils/date-utils"
 import {
@@ -46,6 +47,7 @@ import {
   updateBookingStatus,
   sendBookingEmail,
   verifyEmailDelivery,
+  updateBooking,
 } from "../services/bookingApi"
 import { cn } from "../lib/utils"
 import { useToast } from "../hooks/useToast"
@@ -68,6 +70,8 @@ export default function BookingPage() {
 
   const [bookingSlots, setBookingSlots] = useState<BookingSlot[]>([])
   const [loading, setLoading] = useState(false)
+
+  // Email dialog state
   const [emailDialogOpen, setEmailDialogOpen] = useState(false)
   const [selectedBookingForEmail, setSelectedBookingForEmail] = useState<BookingSlot | null>(null)
   const [recipientEmail, setRecipientEmail] = useState("")
@@ -78,6 +82,7 @@ export default function BookingPage() {
     messageId?: string
   } | null>(null)
 
+  // Create form state
   const [bookingForm, setBookingForm] = useState<Omit<BookingSlot, "id" | "status">>({
     parentName: "",
     childName: "",
@@ -87,6 +92,21 @@ export default function BookingPage() {
     contactMethod: "in-person",
     purpose: "",
     notes: "",
+  })
+
+  // Edit dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editingBooking, setEditingBooking] = useState<BookingSlot | null>(null)
+  const [editForm, setEditForm] = useState<Omit<BookingSlot, "id">>({
+    parentName: "",
+    childName: "",
+    date: "",
+    time: "",
+    duration: 30,
+    contactMethod: "in-person",
+    purpose: "",
+    notes: "",
+    status: "pending",
   })
 
   // Load bookings
@@ -103,15 +123,23 @@ export default function BookingPage() {
         })
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [toast])
 
-  // Available time slots
+  // Available time slots (for create)
   function getAvailableTimeSlots(date: string) {
     const bookedTimes = bookingSlots.filter((b) => b.date === date && b.status !== "cancelled").map((b) => b.time)
     return timeSlots.filter((t) => !bookedTimes.includes(t))
   }
 
-  // Save booking
+  // Available time slots for edit (exclude current booking from conflict)
+  function getAvailableTimeSlotsForEdit(date: string, currentBookingId?: string) {
+    const bookedTimes = bookingSlots
+      .filter((b) => b.date === date && b.status !== "cancelled" && b.id !== currentBookingId)
+      .map((b) => b.time)
+    return timeSlots.filter((t) => !bookedTimes.includes(t))
+  }
+
+  // Save booking (create)
   async function handleSaveBooking() {
     if (!bookingForm.parentName || !bookingForm.childName || !bookingForm.date || !bookingForm.time) return
     try {
@@ -142,7 +170,51 @@ export default function BookingPage() {
     }
   }
 
-  // Update booking status
+  // Open edit dialog
+  const handleOpenEditDialog = (booking: BookingSlot) => {
+    setEditingBooking(booking)
+    setEditForm({
+      parentName: booking.parentName,
+      childName: booking.childName,
+      date: booking.date,
+      time: booking.time,
+      duration: booking.duration,
+      contactMethod: booking.contactMethod,
+      purpose: booking.purpose,
+      notes: booking.notes,
+      status: booking.status,
+    })
+    setEditDialogOpen(true)
+  }
+
+  // Update booking (edit)
+  const handleUpdateBooking = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingBooking) return
+
+    try {
+      const updated = await updateBooking(editingBooking.id, editForm)
+      setBookingSlots((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
+
+      toast({
+        title: "Booking Updated",
+        description: "The meeting details were updated successfully",
+        variant: "success",
+      })
+
+      setEditDialogOpen(false)
+      setEditingBooking(null)
+    } catch (err) {
+      console.error("Error updating booking:", err)
+      toast({
+        title: "Error",
+        description: "Failed to update booking",
+        variant: "error",
+      })
+    }
+  }
+
+  // Update booking status (pending/confirmed/cancelled)
   async function handleStatusUpdate(id: string, status: "pending" | "confirmed" | "cancelled") {
     try {
       const updated = await updateBookingStatus(id, status)
@@ -183,6 +255,7 @@ export default function BookingPage() {
     }
   }
 
+  // Email dialog open
   const handleOpenEmailDialog = (booking: BookingSlot) => {
     setSelectedBookingForEmail(booking)
     setRecipientEmail("")
@@ -190,6 +263,7 @@ export default function BookingPage() {
     setEmailDialogOpen(true)
   }
 
+  // Send email
   const handleSendEmail = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedBookingForEmail || !recipientEmail) return
@@ -198,25 +272,26 @@ export default function BookingPage() {
     setEmailStatus(null)
 
     try {
-      // Send email
       const result = await sendBookingEmail(selectedBookingForEmail, recipientEmail)
 
-      if (result.success && result.messageId) {
-        // Email sent successfully
-        setEmailStatus({
-          sent: true,
-          verified: false,
-          messageId: result.messageId,
-        })
+      if (!result.success) {
+        throw new Error(result.error || "Failed to send email")
+      }
 
-        toast({
-          title: "Email Sent!",
-          description: `Booking details sent to ${recipientEmail}`,
-          variant: "success",
-          duration: 5000,
-        })
+      setEmailStatus({
+        sent: true,
+        verified: false,
+        messageId: result.messageId,
+      })
 
-        // Verify delivery after a short delay
+      toast({
+        title: "Email Sent!",
+        description: `Booking details sent to ${recipientEmail}`,
+        variant: "success",
+        duration: 5000,
+      })
+
+      if (result.messageId) {
         setTimeout(async () => {
           try {
             const verification = await verifyEmailDelivery(result.messageId!)
@@ -241,18 +316,14 @@ export default function BookingPage() {
             console.error("Email verification error:", verifyError)
           }
         }, 3000)
-
-        // Close dialog after showing success
-        setTimeout(() => {
-          setEmailDialogOpen(false)
-          setRecipientEmail("")
-          setSelectedBookingForEmail(null)
-          setEmailStatus(null)
-        }, 2000)
-      } else {
-        // Email failed
-        throw new Error(result.error || "Failed to send email")
       }
+
+      setTimeout(() => {
+        setEmailDialogOpen(false)
+        setRecipientEmail("")
+        setSelectedBookingForEmail(null)
+        setEmailStatus(null)
+      }, 2000)
     } catch (err) {
       console.error("Error sending email:", err)
       setEmailStatus({
@@ -303,7 +374,6 @@ export default function BookingPage() {
               </div>
             </div>
           </div>
-          {/* Floating elements */}
           <div className="absolute top-4 right-4 animate-bounce">
             <Star className="h-6 w-6 text-yellow-300" />
           </div>
@@ -314,7 +384,7 @@ export default function BookingPage() {
 
         <Section title="Meeting Booking System" description="Connect with teachers to discuss your child's journey">
           <div className="grid lg:grid-cols-2 gap-8">
-            {/* Enhanced Booking Form */}
+            {/* Booking Form */}
             <Card className="relative overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-white to-blue-50/50">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5" />
               <CardHeader className="relative">
@@ -326,7 +396,7 @@ export default function BookingPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="relative space-y-6">
-                {/* Date & Time with enhanced styling */}
+                {/* Date & Time */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="booking-date" className="text-sm font-semibold text-gray-700">
@@ -366,7 +436,7 @@ export default function BookingPage() {
                   </div>
                 </div>
 
-                {/* Names with icons */}
+                {/* Names */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="parent-name" className="text-sm font-semibold text-gray-700">
@@ -429,7 +499,9 @@ export default function BookingPage() {
                         <div className="flex items-center gap-2">
                           {bookingForm.contactMethod === "video" && <Video className="w-4 h-4 text-blue-500" />}
                           {bookingForm.contactMethod === "phone" && <Phone className="w-4 h-4 text-green-500" />}
-                          {bookingForm.contactMethod === "in-person" && <Users className="w-4 h-4 text-purple-500" />}
+                          {bookingForm.contactMethod === "in-person" && (
+                            <Users className="w-4 h-4 text-purple-500" />
+                          )}
                           <span>
                             {bookingForm.contactMethod === "in-person"
                               ? "In Person"
@@ -439,7 +511,6 @@ export default function BookingPage() {
                           </span>
                         </div>
                       </SelectTrigger>
-
                       <SelectContent>
                         <SelectItem value="in-person">
                           <div className="flex items-center gap-2">
@@ -499,14 +570,19 @@ export default function BookingPage() {
                 <Button
                   className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
                   onClick={handleSaveBooking}
-                  disabled={!bookingForm.parentName || !bookingForm.childName || !bookingForm.date || !bookingForm.time}
+                  disabled={
+                    !bookingForm.parentName ||
+                    !bookingForm.childName ||
+                    !bookingForm.date ||
+                    !bookingForm.time
+                  }
                 >
                   Request Meeting
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Enhanced Upcoming Bookings */}
+            {/* Upcoming Bookings */}
             <Card className="relative overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-white to-purple-50/50">
               <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5" />
               <CardHeader className="relative">
@@ -621,6 +697,15 @@ export default function BookingPage() {
                                   </Button>
                                 </>
                               )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOpenEditDialog(booking)}
+                                className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 border-purple-200"
+                              >
+                                <Pencil className="w-3 h-3 mr-1" />
+                                Edit
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -784,6 +869,228 @@ export default function BookingPage() {
                     Send Email
                   </>
                 )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Booking Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl border-0 shadow-2xl bg-gradient-to-br from-white via-purple-50/40 to-pink-50/40 backdrop-blur-sm">
+          <DialogHeader className="pb-6">
+            <DialogTitle className="flex items-center gap-4 text-3xl">
+              <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl shadow-xl">
+                <Pencil className="h-8 w-8 text-white" />
+              </div>
+              Edit Booking
+            </DialogTitle>
+            <DialogDescription className="text-lg text-gray-600 mt-3">
+              Update the meeting details and save the changes.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateBooking}>
+            <DialogBody className="space-y-6">
+              {/* Date & Time */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-date" className="text-sm font-semibold text-gray-700">
+                    Date
+                  </Label>
+                  <Input
+                    id="edit-date"
+                    type="date"
+                    value={editForm.date}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, date: e.target.value }))}
+                    min={format(today, "yyyy-MM-dd")}
+                    className="border-2 border-purple-100 focus:border-purple-400 rounded-xl transition-all duration-200"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-time" className="text-sm font-semibold text-gray-700">
+                    Time
+                  </Label>
+                  <Select
+                    value={editForm.time}
+                    onValueChange={(value) => setEditForm((prev) => ({ ...prev, time: value }))}
+                  >
+                    <SelectTrigger className="border-2 border-purple-100 focus:border-purple-400 rounded-xl">
+                      {editForm.time || "Select time"}
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getAvailableTimeSlotsForEdit(editForm.date, editingBooking?.id).map((t) => (
+                        <SelectItem key={t} value={t} className="hover:bg-purple-50">
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-purple-500" />
+                            {t}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Names */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-parent-name" className="text-sm font-semibold text-gray-700">
+                    Parent Name
+                  </Label>
+                  <div className="relative">
+                    <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                      id="edit-parent-name"
+                      value={editForm.parentName}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, parentName: e.target.value }))}
+                      className="pl-10 border-2 border-purple-100 focus:border-purple-400 rounded-xl"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-child-name" className="text-sm font-semibold text-gray-700">
+                    Child Name
+                  </Label>
+                  <div className="relative">
+                    <Heart className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-pink-400" />
+                    <Input
+                      id="edit-child-name"
+                      value={editForm.childName}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, childName: e.target.value }))}
+                      className="pl-10 border-2 border-purple-100 focus:border-purple-400 rounded-xl"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Duration & Contact Method */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Duration</Label>
+                  <Select
+                    value={editForm.duration.toString()}
+                    onValueChange={(v) => setEditForm((prev) => ({ ...prev, duration: Number.parseInt(v) }))}
+                  >
+                    <SelectTrigger className="border-2 border-purple-100 focus:border-purple-400 rounded-xl">
+                      {editForm.duration} minutes
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">15 minutes</SelectItem>
+                      <SelectItem value="30">30 minutes</SelectItem>
+                      <SelectItem value="45">45 minutes</SelectItem>
+                      <SelectItem value="60">60 minutes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Meeting Type</Label>
+                  <Select
+                    value={editForm.contactMethod}
+                    onValueChange={(v) => setEditForm((prev) => ({ ...prev, contactMethod: v as any }))}
+                  >
+                    <SelectTrigger className="border-2 border-purple-100 focus:border-purple-400 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        {editForm.contactMethod === "video" && <Video className="w-4 h-4 text-blue-500" />}
+                        {editForm.contactMethod === "phone" && <Phone className="w-4 h-4 text-green-500" />}
+                        {editForm.contactMethod === "in-person" && <Users className="w-4 h-4 text-purple-500" />}
+                        <span>
+                          {editForm.contactMethod === "in-person"
+                            ? "In Person"
+                            : editForm.contactMethod === "phone"
+                              ? "Phone Call"
+                              : "Video Call"}
+                        </span>
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="in-person">
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4 text-purple-500" />
+                          In Person
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="phone">
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-4 h-4 text-green-500" />
+                          Phone Call
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="video">
+                        <div className="flex items-center gap-2">
+                          <Video className="w-4 h-4 text-blue-500" />
+                          Video Call
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Purpose */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700">Meeting Purpose</Label>
+                <Select
+                  value={editForm.purpose}
+                  onValueChange={(v) => setEditForm((prev) => ({ ...prev, purpose: v }))}
+                >
+                  <SelectTrigger className="border-2 border-purple-100 focus:border-purple-400 rounded-xl">
+                    {meetingPurposes.find((p) => p.value === editForm.purpose)?.label || "Select meeting purpose"}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {meetingPurposes.map((p) => (
+                      <SelectItem key={p.value} value={p.value} className="hover:bg-purple-50">
+                        <div className="flex items-center gap-2">{p.label}</div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700">Status</Label>
+                <Select
+                  value={editForm.status}
+                  onValueChange={(v) =>
+                    setEditForm((prev) => ({ ...prev, status: v as "pending" | "confirmed" | "cancelled" }))
+                  }
+                >
+                  <SelectTrigger className="border-2 border-purple-100 focus:border-purple-400 rounded-xl">
+                    {editForm.status.charAt(0).toUpperCase() + editForm.status.slice(1)}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700">Additional Notes</Label>
+                <Textarea
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, notes: e.target.value }))}
+                  rows={3}
+                  className="border-2 border-purple-100 focus:border-purple-400 rounded-xl resize-none"
+                />
+              </div>
+            </DialogBody>
+            <DialogFooter className="pt-6 gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditDialogOpen(false)}
+                className="border-2 border-gray-300 hover:bg-gray-50 px-8 py-3 text-base font-semibold"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 shadow-xl hover:shadow-2xl transition-all duration-300 px-8 py-3 text-base font-semibold"
+              >
+                Save Changes
               </Button>
             </DialogFooter>
           </form>

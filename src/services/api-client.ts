@@ -8,7 +8,63 @@ class ApiClient {
     return Boolean(Cookies.get("accessToken"))
   }
 
-  // ... (autres méthodes)
+  /**
+   * Generic request helper used by get/post/put/delete
+   */
+  private async request<T>(
+    method: "GET" | "POST" | "PUT" | "DELETE",
+    path: string,
+    body?: any,
+  ): Promise<T> {
+    const url = `${this.baseURL}${path}`
+
+    const response = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include", // important: send cookies
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    })
+
+    // Handle auth errors globally
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        this.logout().catch(() => {
+          // ignore logout error here
+        })
+      }
+
+      let errorMessage = `API error: ${response.status} ${response.statusText}`
+
+      try {
+        const data = await response.json()
+        if (data && (data.message || data.error)) {
+          errorMessage = data.message || data.error
+        }
+      } catch {
+        // ignore JSON parse error, keep default message
+      }
+
+      throw new Error(errorMessage)
+    }
+
+    // No content
+    if (response.status === 204) {
+      return undefined as T
+    }
+
+    // Try JSON, fallback to text
+    const contentType = response.headers.get("Content-Type") || ""
+    if (contentType.includes("application/json")) {
+      return (await response.json()) as T
+    }
+
+    const text = (await response.text()) as unknown as T
+    return text
+  }
+
+  // ---------- AUTH SPECIFIC ----------
 
   async login(email: string, password: string): Promise<any> {
     const response = await fetch(`${this.baseURL}/auth/login`, {
@@ -17,43 +73,50 @@ class ApiClient {
       credentials: "include",
       body: JSON.stringify({ email, password }),
     })
+
     if (!response.ok) {
       throw new Error("Invalid credentials")
     }
-    // Si le backend définit le cookie HttpOnly, cette partie est juste pour la "réussite" de la connexion.
-    // Les cookies sont gérés automatiquement par le navigateur.
+
+    // If backend sets HttpOnly cookie, browser stores it automatically.
+    // You can still return the body (e.g., user info).
     return response.json()
   }
 
-  async get<T>(path: string): Promise<T> {
-    const response = await fetch(`${this.baseURL}${path}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        // Pas besoin de passer le token manuellement si c'est un cookie
-        // 'Authorization': `Bearer ${Cookies.get('accessToken')}` // Seulement si vous gérez le token manuellement
-      },
-      credentials: "include", // Important pour envoyer les cookies
-    })
-    if (!response.ok) {
-      // Gérer la déconnexion si 401 ou 403
-      if (response.status === 401 || response.status === 403) {
-        this.logout() // Déclencher la déconnexion via le client API
+  async logout(): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseURL}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      })
+
+      if (!response.ok) {
+        console.error("Failed to log out on server.")
       }
-      throw new Error(`API error: ${response.statusText}`)
+    } catch (err) {
+      console.error("Logout request failed:", err)
     }
-    return response.json() as Promise<T>
+
+    // Remove non-HttpOnly token if stored on client
+    Cookies.remove("accessToken")
   }
 
-  async logout(): Promise<void> {
-    const response = await fetch(`${this.baseURL}/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-    })
-    if (!response.ok) {
-      console.error("Failed to log out on server.")
-    }
-    Cookies.remove("accessToken") // Supprimer le cookie côté client si non HttpOnly
+  // ---------- HTTP HELPERS ----------
+
+  async get<T>(path: string): Promise<T> {
+    return this.request<T>("GET", path)
+  }
+
+  async post<T>(path: string, data?: any): Promise<T> {
+    return this.request<T>("POST", path, data)
+  }
+
+  async put<T>(path: string, data?: any): Promise<T> {
+    return this.request<T>("PUT", path, data)
+  }
+
+  async delete<T>(path: string): Promise<T> {
+    return this.request<T>("DELETE", path)
   }
 }
 

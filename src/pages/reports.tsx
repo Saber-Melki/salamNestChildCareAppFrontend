@@ -24,17 +24,33 @@ import {
   Shield,
   Award,
   Sparkles,
+  Trash2,
+  UserCheck,
+  LogOut,
+  Clock,
 } from "lucide-react"
 import { Badge } from "../components/ui/badge"
 import { exportCsv } from "../CSV/export-csv"
 
+/* ----------------------------- Types ----------------------------- */
+
+interface ChildRecord {
+  id: string
+  name?: string
+  firstName?: string
+  lastName?: string
+  fullName?: string
+}
+
 interface AttendanceRecord {
   id: string
+  childId?: string
   childName: string
   date: string
   status: string
-  checkInTime?: string
-  checkOutTime?: string
+  checkIn?: string | null
+  checkOut?: string | null
+  child?: ChildRecord
 }
 
 interface BillingRecord {
@@ -47,10 +63,26 @@ interface BillingRecord {
 
 interface HealthRecord {
   id: string
+  childId?: string
   childName: string
   type: string
   date: string
   notes: string
+  child?: ChildRecord
+}
+
+interface StaffMember {
+  id: string
+  firstName: string
+  lastName: string
+  role: "teacher" | "assistant" | "director" | "staff" | string
+  status?: "active" | "inactive" | "on_leave" | string
+}
+
+interface StaffToday {
+  status: "in" | "out" | null
+  checkIn?: string
+  checkOut?: string
 }
 
 interface ReportStats {
@@ -70,7 +102,46 @@ interface ReportStats {
     uniqueChildren: number
     avgPerChild: number
   }
+  staff: {
+    totalStaff: number
+    checkedIn: number
+    checkedOut: number
+    notMarked: number
+  }
 }
+
+/* --------------------------- Helpers --------------------------- */
+
+const STAFF_API = "http://localhost:8080/staff"
+const STAFF_ATT_API = "http://localhost:8080/attendance/staff"
+
+// robustly compute a display child name
+const resolveChildName = (
+  record: { childName?: string | null; childId?: string; child?: ChildRecord | null },
+  childMap: Map<string, ChildRecord>,
+): string => {
+  if (record.childName && record.childName !== "null") return record.childName
+
+  const child = record.child || (record.childId ? childMap.get(record.childId) : undefined)
+  if (child) {
+    if (child.fullName && child.fullName !== "null") return child.fullName
+    if (child.name && child.name !== "null") return child.name
+    const parts = [child.firstName, child.lastName].filter(Boolean)
+    if (parts.length) return parts.join(" ")
+  }
+
+  return "Unknown"
+}
+
+// normalize time value to "HH:MM" (or undefined)
+const normalizeTime = (value?: string | null): string | undefined => {
+  if (!value) return undefined
+  // backend uses "HH:MM:SS" – but be safe
+  if (value.length >= 5) return value.slice(0, 5)
+  return value
+}
+
+/* ----------------------------- Component ----------------------------- */
 
 export default function Reports() {
   const [tab, setTab] = useState("attendance")
@@ -81,66 +152,164 @@ export default function Reports() {
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([])
   const [billingData, setBillingData] = useState<BillingRecord[]>([])
   const [healthData, setHealthData] = useState<HealthRecord[]>([])
+  const [childrenData, setChildrenData] = useState<ChildRecord[]>([])
+  const [staffList, setStaffList] = useState<StaffMember[]>([])
+  const [staffTodayMap, setStaffTodayMap] = useState<Record<string, StaffToday>>({})
+
   const [stats, setStats] = useState<ReportStats>({
     attendance: { totalRecords: 0, presentCount: 0, absentCount: 0, attendanceRate: 0 },
     revenue: { totalCollected: 0, totalOutstanding: 0, collectionRate: 0 },
     health: { totalMilestones: 0, uniqueChildren: 0, avgPerChild: 0 },
+    staff: { totalStaff: 0, checkedIn: 0, checkedOut: 0, notMarked: 0 },
   })
 
+  const [deletingAttendanceId, setDeletingAttendanceId] = useState<string | null>(null)
+  const [deletingBillingId, setDeletingBillingId] = useState<string | null>(null)
+
   const fetchReportsData = async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true)
-    } else {
-      setLoading(true)
-    }
+    if (isRefresh) setRefreshing(true)
+    else setLoading(true)
+
     setError(null)
 
     try {
-      const [attendanceRes, billingRes, healthRes] = await Promise.all([
+      const [attendanceRes, billingRes, healthRes, childrenRes, staffRes] = await Promise.all([
         fetch("http://localhost:8080/attendance"),
         fetch("http://localhost:8080/billing"),
         fetch("http://localhost:8080/health"),
+        fetch("http://localhost:8080/children"),
+        fetch(STAFF_API),
       ])
 
-      if (!attendanceRes.ok || !billingRes.ok || !healthRes.ok) {
+      if (!attendanceRes.ok || !billingRes.ok || !healthRes.ok || !childrenRes.ok || !staffRes.ok) {
         throw new Error("Failed to fetch reports data")
       }
 
-      const [attendance, billing, health] = await Promise.all([
+      const [attendanceRaw, billingRaw, healthRaw, childrenRaw, staffRaw] = await Promise.all([
         attendanceRes.json(),
         billingRes.json(),
         healthRes.json(),
+        childrenRes.json(),
+        staffRes.json(),
       ])
+
+      /* ---- children map ---- */
+      const children: ChildRecord[] = childrenRaw
+      setChildrenData(children)
+
+      const childMap = new Map<string, ChildRecord>()
+      children.forEach((c) => {
+        if (!c.id) return
+        const fullName =
+          c.fullName || c.name || [c.firstName, c.lastName].filter(Boolean).join(" ") || undefined
+        childMap.set(c.id, { ...c, fullName })
+      })
+
+      /* ---- attendance mapping (key fix for checkIn/checkOut) ---- */
+      const attendance: AttendanceRecord[] = (attendanceRaw as any[]).map((a) => {
+        // a.checkIn / a.checkOut from backend are "HH:MM:SS" (nullable)
+        const rawIn =
+          a.checkIn ??
+          a.check_in ??
+          a.checkin ??
+          a.check_in_time ??
+          a.in ??
+          a.start ??
+          a.clockIn ??
+          null
+        const rawOut =
+          a.checkOut ??
+          a.check_out ??
+          a.checkout ??
+          a.check_out_time ??
+          a.out ??
+          a.end ??
+          a.clockOut ??
+          null
+
+        return {
+          ...a,
+          childName: resolveChildName(a, childMap),
+          checkIn: normalizeTime(rawIn),
+          checkOut: normalizeTime(rawOut),
+        }
+      })
+
+      /* ---- health mapping (keep names consistent) ---- */
+      const health: HealthRecord[] = (healthRaw as any[]).map((h) => ({
+        ...h,
+        childName: resolveChildName(h, childMap),
+      }))
+
+      const billing: BillingRecord[] = billingRaw
+      const staff: StaffMember[] = staffRaw
 
       setAttendanceData(attendance)
       setBillingData(billing)
       setHealthData(health)
+      setStaffList(staff)
 
-      // Calculate attendance stats
-      const presentCount = attendance.filter((a: AttendanceRecord) => a.status === "present").length
-      const absentCount = attendance.filter((a: AttendanceRecord) => a.status === "absent").length
+      /* ---- staff today map ---- */
+      const staffToday: Record<string, StaffToday> = {}
+      await Promise.all(
+        staff.map(async (member) => {
+          try {
+            const resp = await fetch(`${STAFF_ATT_API}/${member.id}/today`)
+            if (!resp.ok) {
+              staffToday[member.id] = { status: null }
+              return
+            }
+            const data = await resp.json()
+            staffToday[member.id] = {
+              status: data.status,
+              checkIn: normalizeTime(data.checkIn),
+              checkOut: normalizeTime(data.checkOut),
+            }
+          } catch {
+            staffToday[member.id] = { status: null }
+          }
+        }),
+      )
+      setStaffTodayMap(staffToday)
+
+      /* ---- attendance stats ---- */
+      const presentCount = attendance.filter((a) => a.status === "present").length
+      const absentCount = attendance.filter((a) => a.status === "absent" || a.status === "away").length
       const totalRecords = attendance.length
       const attendanceRate = totalRecords > 0 ? (presentCount / totalRecords) * 100 : 0
 
-      // Calculate billing stats
+      /* ---- revenue stats ---- */
       const totalCollected = billing
-        .filter((b: BillingRecord) => b.status === "paid")
-        .reduce((sum: number, b: BillingRecord) => sum + b.amount, 0)
+        .filter((b) => b.status === "paid")
+        .reduce((sum, b) => sum + b.amount, 0)
       const totalOutstanding = billing
-        .filter((b: BillingRecord) => b.status !== "paid")
-        .reduce((sum: number, b: BillingRecord) => sum + b.amount, 0)
+        .filter((b) => b.status !== "paid")
+        .reduce((sum, b) => sum + b.amount, 0)
       const totalRevenue = totalCollected + totalOutstanding
       const collectionRate = totalRevenue > 0 ? (totalCollected / totalRevenue) * 100 : 0
 
-      // Calculate health/development stats
-      const uniqueChildren = new Set(health.map((h: HealthRecord) => h.childName)).size
+      /* ---- health stats ---- */
+      const uniqueChildren = new Set(health.map((h) => h.childName)).size
       const totalMilestones = health.length
       const avgPerChild = uniqueChildren > 0 ? totalMilestones / uniqueChildren : 0
+
+      /* ---- staff stats ---- */
+      const totalStaff = staff.length
+      let checkedIn = 0
+      let checkedOut = 0
+      let notMarked = 0
+      staff.forEach((member) => {
+        const t = staffToday[member.id]
+        if (!t || t.status === null) notMarked++
+        else if (t.status === "in") checkedIn++
+        else checkedOut++
+      })
 
       setStats({
         attendance: { totalRecords, presentCount, absentCount, attendanceRate },
         revenue: { totalCollected, totalOutstanding, collectionRate },
         health: { totalMilestones, uniqueChildren, avgPerChild },
+        staff: { totalStaff, checkedIn, checkedOut, notMarked },
       })
     } catch (err) {
       console.error("[Reports] Error:", err)
@@ -155,14 +324,46 @@ export default function Reports() {
     fetchReportsData()
   }, [])
 
+  /* ---------------------- Delete handlers ---------------------- */
+
+  const handleDeleteAttendance = async (id: string) => {
+    try {
+      setDeletingAttendanceId(id)
+      const res = await fetch(`http://localhost:8080/attendance/${id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Failed to delete attendance record")
+      setAttendanceData((prev) => prev.filter((r) => r.id !== id))
+    } catch (err) {
+      console.error(err)
+      alert("Failed to delete attendance record.")
+    } finally {
+      setDeletingAttendanceId(null)
+    }
+  }
+
+  const handleDeleteBilling = async (id: string) => {
+    try {
+      setDeletingBillingId(id)
+      const res = await fetch(`http://localhost:8080/billing/${id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Failed to delete billing record")
+      setBillingData((prev) => prev.filter((r) => r.id !== id))
+    } catch (err) {
+      console.error(err)
+      alert("Failed to delete billing record.")
+    } finally {
+      setDeletingBillingId(null)
+    }
+  }
+
+  /* ---------------------- Export helpers ---------------------- */
+
   const formatAttendanceForExport = () => {
     const headers = ["Date", "Child Name", "Status", "Check-in", "Check-out"]
     const rows = attendanceData.map((record) => [
       record.date,
       record.childName,
       record.status,
-      record.checkInTime || "N/A",
-      record.checkOutTime || "N/A",
+      record.checkIn || "N/A",
+      record.checkOut || "N/A",
     ])
     return [headers, ...rows]
   }
@@ -178,6 +379,25 @@ export default function Reports() {
     const rows = healthData.map((record) => [record.childName, record.type, record.date, record.notes])
     return [headers, ...rows]
   }
+
+  const formatStaffAttendanceForExport = () => {
+    const headers = ["Staff Name", "Role", "Status (Today)", "Check-in", "Check-out"]
+    const rows = staffList.map((member) => {
+      const today = staffTodayMap[member.id]
+      const statusLabel =
+        today?.status === "in" ? "in" : today?.status === "out" ? "out" : "not_marked"
+      return [
+        `${member.firstName} ${member.lastName}`,
+        member.role,
+        statusLabel,
+        today?.checkIn || "N/A",
+        today?.checkOut || "N/A",
+      ]
+    })
+    return [headers, ...rows]
+  }
+
+  /* ---------------------- PDF generator ---------------------- */
 
   const generatePDF = (data: (string | number)[][], title: string) => {
     const htmlContent = `
@@ -246,8 +466,6 @@ export default function Reports() {
               border-radius: 15px;
               text-align: center;
               box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-              transform: translateY(0);
-              transition: transform 0.3s ease;
             }
             .stat-number {
               font-size: 36px;
@@ -416,6 +634,31 @@ export default function Reports() {
             `
                 : ""
             }
+
+            ${
+              title === "Staff Attendance"
+                ? `
+              <div class="stats">
+                <div class="stat-card">
+                  <div class="stat-number">${stats.staff.totalStaff}</div>
+                  <div class="stat-label">Total Staff</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-number">${stats.staff.checkedIn}</div>
+                  <div class="stat-label">Checked In</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-number">${stats.staff.checkedOut}</div>
+                  <div class="stat-label">Checked Out</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-number">${stats.staff.notMarked}</div>
+                  <div class="stat-label">Not Marked</div>
+                </div>
+              </div>
+            `
+                : ""
+            }
             
             <table>
               <thead>
@@ -434,9 +677,17 @@ export default function Reports() {
                         (cell, index) => `
                       <td>${
                         title === "Attendance" && index === 2
-                          ? `<span class="badge ${cell === "present" ? "badge-success" : "badge-danger"}">${cell}</span>`
+                          ? `<span class="badge ${
+                              cell === "present" ? "badge-success" : "badge-danger"
+                            }">${cell}</span>`
                           : title === "Revenue" && index === 2
-                            ? `<span class="badge ${cell === "paid" ? "badge-success" : cell === "overdue" ? "badge-danger" : "badge-warning"}">${cell}</span>`
+                            ? `<span class="badge ${
+                                cell === "paid"
+                                  ? "badge-success"
+                                  : cell === "overdue"
+                                    ? "badge-danger"
+                                    : "badge-warning"
+                              }">${cell}</span>`
                             : cell
                       }</td>
                     `,
@@ -471,6 +722,8 @@ export default function Reports() {
     }
   }
 
+  /* ------------------------- Error UI ------------------------- */
+
   if (error) {
     return (
       <AppShell title="Reports & Analytics">
@@ -494,23 +747,19 @@ export default function Reports() {
     )
   }
 
+  /* ------------------------- Main UI ------------------------- */
+
   return (
     <AppShell title="Reports & Analytics">
-      {/* Stunning Hero Header with Animations */}
+      {/* Hero header (same as before) */}
       <div className="relative overflow-hidden rounded-3xl border-0 shadow-2xl mb-8">
-        {/* Multi-layer animated gradients */}
         <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600" />
         <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/20 via-transparent to-pink-500/20 animate-pulse" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.3),rgba(255,255,255,0))]" />
-
-        {/* Floating orbs */}
         <div className="absolute top-8 right-12 w-32 h-32 bg-white/10 rounded-full blur-3xl animate-bounce" />
         <div className="absolute bottom-8 left-12 w-24 h-24 bg-purple-300/10 rounded-full blur-2xl animate-pulse" />
         <div className="absolute top-1/2 right-1/3 w-20 h-20 bg-pink-300/10 rounded-full blur-xl animate-bounce delay-1000" />
-
-        {/* Grid pattern overlay */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:40px_40px]" />
-
         <div className="relative p-10 md:p-12 text-white">
           <div className="flex items-start justify-between gap-6">
             <div className="flex items-start gap-5">
@@ -562,7 +811,7 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Stunning Summary Cards */}
+      {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card className="group relative overflow-hidden border-0 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-500 opacity-90" />
@@ -622,34 +871,29 @@ export default function Reports() {
         </Card>
       </div>
 
-      {/* Enhanced Tabs */}
+      {/* Tabs: Children attendance, Staff, Revenue, Development */}
       <Tabs defaultValue="attendance" value={tab} onValueChange={setTab}>
-        <TabsList className="grid w-full grid-cols-3 mb-8 h-16 bg-gradient-to-r from-violet-100 via-purple-100 to-fuchsia-100 rounded-2xl p-2 shadow-lg">
-          <TabsTrigger
-            value="attendance"
-            // className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-xl rounded-xl transition-all duration-300"
-          >
+        <TabsList className="grid w-full grid-cols-4 mb-8 h-16 bg-gradient-to-r from-violet-100 via-purple-100 to-fuchsia-100 rounded-2xl p-2 shadow-lg">
+          <TabsTrigger value="attendance">
             <Activity className="h-5 w-5 mr-2" />
-            <span className="font-bold">Attendance</span>
+            <span className="font-bold">Children</span>
           </TabsTrigger>
-          <TabsTrigger
-            value="revenue"
-            // className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-500 data-[state=active]:text-white data-[state=active]:shadow-xl rounded-xl transition-all duration-300"
-          >
+          <TabsTrigger value="staff">
+            <Users className="h-5 w-5 mr-2" />
+            <span className="font-bold">Staff</span>
+          </TabsTrigger>
+          <TabsTrigger value="revenue">
             <DollarSign className="h-5 w-5 mr-2" />
             <span className="font-bold">Revenue</span>
           </TabsTrigger>
-          <TabsTrigger
-            value="development"
-            // className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-rose-500 data-[state=active]:text-white data-[state=active]:shadow-xl rounded-xl transition-all duration-300"
-          >
+          <TabsTrigger value="development">
             <TrendingUp className="h-5 w-5 mr-2" />
             <span className="font-bold">Development</span>
           </TabsTrigger>
         </TabsList>
 
+        {/* CHILD ATTENDANCE TAB */}
         <TabsContent value="attendance" className="mt-0 space-y-6">
-          {/* Attendance Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[
               {
@@ -745,6 +989,7 @@ export default function Reports() {
                       <TableHead className="font-bold text-gray-800">Status</TableHead>
                       <TableHead className="font-bold text-gray-800">Check-in</TableHead>
                       <TableHead className="font-bold text-gray-800">Check-out</TableHead>
+                      <TableHead className="font-bold text-gray-800 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -768,8 +1013,23 @@ export default function Reports() {
                             {record.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-gray-700">{record.checkInTime || "N/A"}</TableCell>
-                        <TableCell className="text-gray-700">{record.checkOutTime || "N/A"}</TableCell>
+                        <TableCell className="text-gray-700">{record.checkIn || "N/A"}</TableCell>
+                        <TableCell className="text-gray-700">{record.checkOut || "N/A"}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                            onClick={() => handleDeleteAttendance(record.id)}
+                            disabled={deletingAttendanceId === record.id}
+                          >
+                            {deletingAttendanceId === record.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -779,8 +1039,157 @@ export default function Reports() {
           </Section>
         </TabsContent>
 
+        {/* STAFF ATTENDANCE TAB */}
+        <TabsContent value="staff" className="mt-0 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[
+              {
+                label: "Total Staff",
+                value: stats.staff.totalStaff,
+                icon: Users,
+                gradient: "from-blue-500 to-indigo-500",
+              },
+              {
+                label: "Checked In",
+                value: stats.staff.checkedIn,
+                icon: UserCheck,
+                gradient: "from-emerald-500 to-green-500",
+              },
+              {
+                label: "Checked Out",
+                value: stats.staff.checkedOut,
+                icon: LogOut,
+                gradient: "from-slate-500 to-slate-700",
+              },
+              {
+                label: "Not Marked",
+                value: stats.staff.notMarked,
+                icon: Clock,
+                gradient: "from-amber-500 to-orange-500",
+              },
+            ].map((stat, index) => {
+              const Icon = stat.icon
+              return (
+                <Card
+                  key={index}
+                  className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                >
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-10 group-hover:opacity-20 transition-opacity`}
+                  />
+                  <CardContent className="relative p-6 text-center">
+                    <Icon
+                      className={`h-10 w-10 mx-auto mb-3 bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent`}
+                    />
+                    <p className="text-3xl font-black text-gray-800 mb-1">
+                      {loading ? <Loader2 className="h-8 w-8 mx-auto animate-spin text-gray-400" /> : stat.value}
+                    </p>
+                    <p className="text-sm text-gray-600 font-semibold">{stat.label}</p>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => exportCsv("staff-attendance-today.csv", formatStaffAttendanceForExport())}
+              disabled={loading}
+              className="border-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-300"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => generatePDF(formatStaffAttendanceForExport(), "Staff Attendance")}
+              disabled={loading}
+              className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white border-0 shadow-lg"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Download PDF
+            </Button>
+          </div>
+
+          <Section
+            title="Staff Attendance Today"
+            description="Overview of today’s check-ins and check-outs for all staff members."
+          >
+            <div className="rounded-2xl border-2 border-indigo-100 bg-white shadow-xl overflow-hidden">
+              {loading ? (
+                <div className="p-12 text-center">
+                  <Loader2 className="h-12 w-12 mx-auto animate-spin text-indigo-500 mb-4" />
+                  <p className="text-gray-600 font-medium">Loading staff attendance...</p>
+                </div>
+              ) : staffList.length === 0 ? (
+                <div className="p-12 text-center">
+                  <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-100 mb-4">
+                    <Users className="h-8 w-8 text-indigo-600" />
+                  </div>
+                  <p className="text-gray-600 font-medium">No staff members found</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border-b-2 border-indigo-200">
+                      <TableHead className="font-bold text-gray-800">Staff Member</TableHead>
+                      <TableHead className="font-bold text-gray-800">Role</TableHead>
+                      <TableHead className="font-bold text-gray-800">Status (Today)</TableHead>
+                      <TableHead className="font-bold text-gray-800">Check-in</TableHead>
+                      <TableHead className="font-bold text-gray-800">Check-out</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {staffList.map((member, index) => {
+                      const today = staffTodayMap[member.id]
+                      const status = today?.status ?? null
+
+                      return (
+                        <TableRow
+                          key={member.id}
+                          className={`hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 transition-all ${
+                            index % 2 === 0 ? "bg-white" : "bg-gray-50/50"
+                          }`}
+                        >
+                          <TableCell className="font-semibold text-gray-900">
+                            {member.firstName} {member.lastName}
+                          </TableCell>
+                          <TableCell className="text-gray-700 capitalize">{member.role}</TableCell>
+                          <TableCell>
+                            {status === "in" ? (
+                              <Badge className="bg-gradient-to-r from-emerald-500 to-green-500 text-white border-0 shadow-md">
+                                In
+                              </Badge>
+                            ) : status === "out" ? (
+                              <Badge className="bg-gradient-to-r from-slate-500 to-slate-700 text-white border-0 shadow-md">
+                                Out
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-gradient-to-r from-gray-300 to-gray-400 text-gray-800 border-0 shadow-md">
+                                Not marked
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-gray-700">
+                            {today?.checkIn ? today.checkIn : "N/A"}
+                          </TableCell>
+                          <TableCell className="text-gray-700">
+                            {today?.checkOut ? today.checkOut : "N/A"}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </Section>
+        </TabsContent>
+
+        {/* REVENUE TAB */}
         <TabsContent value="revenue" className="mt-0 space-y-6">
-          {/* Revenue Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
               {
@@ -869,6 +1278,7 @@ export default function Reports() {
                       <TableHead className="font-bold text-gray-800">Amount</TableHead>
                       <TableHead className="font-bold text-gray-800">Status</TableHead>
                       <TableHead className="font-bold text-gray-800">Due Date</TableHead>
+                      <TableHead className="font-bold text-gray-800 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -897,6 +1307,21 @@ export default function Reports() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-gray-700">{record.dueDate}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                            onClick={() => handleDeleteBilling(record.id)}
+                            disabled={deletingBillingId === record.id}
+                          >
+                            {deletingBillingId === record.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -905,7 +1330,6 @@ export default function Reports() {
             </div>
           </Section>
         </TabsContent>
-
       </Tabs>
     </AppShell>
   )
