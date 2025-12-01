@@ -1,6 +1,7 @@
 import { DataResult } from "../types"
 
-const OPENROUTER_API_KEY = "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"
+//const OPENROUTER_API_KEY = "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"
+const OPENROUTER_API_KEY = "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"
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 const GEMINI_MODEL = "google/gemini-2.0-flash-lite-001"
 

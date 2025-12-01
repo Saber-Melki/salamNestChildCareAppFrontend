@@ -26,6 +26,7 @@ import RouteError from "./routes/RouteError";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import VerifyResetCodePage from "./pages/VerifyResetCodePage";
+import BillingSuccess from "./pages/BillingSuccess";
 
 // ⬇️ add these two files (see previous message for page code)
 
@@ -53,6 +54,8 @@ const router = createBrowserRouter([
       { path: "children", element: <Children /> },
       { path: "health", element: <Health /> },
       { path: "billing", element: <Billing /> },
+       { path: "billing/success", element: <BillingSuccess /> },
+
       { path: "scheduling", element: <Scheduling /> },
       { path: "messages", element: <Messages /> },
       { path: "media", element: <Media /> },

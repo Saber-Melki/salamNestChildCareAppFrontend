@@ -66,6 +66,16 @@ export default function Billing() {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState("")
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false)
 
+  // invoice details popup state
+  const [invoiceDetailsOpen, setInvoiceDetailsOpen] = useState(false)
+  const [selectedInvoiceDetails, setSelectedInvoiceDetails] = useState<Invoice | null>(null)
+
+  // delete confirmation + notification state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null)
+  const [deletingInvoice, setDeletingInvoice] = useState(false)
+  const [deleteSuccess, setDeleteSuccess] = useState(false)
+
   const [formData, setFormData] = useState({
     family: "",
     dueDate: "",
@@ -142,24 +152,40 @@ export default function Billing() {
     }
   }
 
-  // Mark invoice as paid
+  // Delete invoice (API + state update, no UI here)
+  const deleteInvoice = async (id: string) => {
+    try {
+      await fetch(`http://localhost:8080/billing/${id}`, { method: "DELETE" })
+      setInvoices((prev) => prev.filter((inv) => inv.id !== id))
+    } catch (err) {
+      console.error("Error deleting invoice:", err)
+      throw err
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!invoiceToDelete) return
+    setDeletingInvoice(true)
+    try {
+      await deleteInvoice(invoiceToDelete.id)
+      setDeleteDialogOpen(false)
+      setInvoiceToDelete(null)
+      setDeleteSuccess(true)
+      setTimeout(() => setDeleteSuccess(false), 4000)
+    } catch {
+      alert("Failed to delete invoice. Please try again.")
+    } finally {
+      setDeletingInvoice(false)
+    }
+  }
+
+  // Mark invoice as paid (manual)
   const markAsPaid = async (id: string) => {
     try {
       await fetch(`http://localhost:8080/billing/${id}/paid`, { method: "POST" })
       setInvoices((prev) => prev.map((inv) => (inv.id === id ? { ...inv, status: "paid" } : inv)))
     } catch (err) {
       console.error("Error marking invoice as paid:", err)
-    }
-  }
-
-  // Delete invoice
-  const deleteInvoice = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this invoice?")) return
-    try {
-      await fetch(`http://localhost:8080/billing/${id}`, { method: "DELETE" })
-      setInvoices((prev) => prev.filter((inv) => inv.id !== id))
-    } catch (err) {
-      console.error("Error deleting invoice:", err)
     }
   }
 
@@ -233,6 +259,36 @@ export default function Billing() {
     }
   }
 
+  // STRIPE: call your PaymentController (billing/pay/checkout/:invoiceId)
+  const handleStripePayment = async () => {
+    if (!selectedInvoiceId) return
+
+    try {
+      const res = await fetch(
+        `http://localhost:8080/billing/pay/checkout/${selectedInvoiceId}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        },
+      )
+
+      if (!res.ok) throw new Error("Failed to create Stripe session")
+
+      const data: { sessionId?: string; url?: string } = await res.json()
+
+      if (data.url) {
+        window.location.href = data.url
+      } else if (data.sessionId) {
+        window.location.href = `/billing/redirect?session_id=${data.sessionId}`
+      } else {
+        alert("Stripe session created but no redirect URL returned.")
+      }
+    } catch (err) {
+      console.error("Stripe payment error:", err)
+      alert("❌ Stripe payment error")
+    }
+  }
+
   const handleSendReminders = async () => {
     setSendingReminders(true)
     setRemindersSent(false)
@@ -256,6 +312,21 @@ export default function Billing() {
 
   return (
     <AppShell title="Invoicing & Payments">
+      {/* Delete success notification toast */}
+      {deleteSuccess && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="flex items-center gap-3 rounded-2xl border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-3 shadow-xl">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white shadow-md">
+              <CheckCircle className="h-4 w-4" />
+            </div>
+            <div className="text-sm">
+              <p className="font-semibold text-green-800">Invoice deleted</p>
+              <p className="text-xs text-green-700">The selected invoice has been removed successfully.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="relative overflow-hidden rounded-3xl border shadow-2xl mb-8">
         <div className="absolute inset-0 bg-gradient-to-br from-pink-400 via-pink-500 to-purple-500 opacity-95" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
@@ -297,7 +368,7 @@ export default function Billing() {
       </div>
 
       <div className="space-y-8">
-        {/* Enhanced Billing Section */}
+        {/* Billing Section */}
         <Section
           title="Automated Billing"
           description="Smart tuition and fee schedules with intelligent reminders for overdue balances."
@@ -378,14 +449,12 @@ export default function Billing() {
                         </Button>
                       </div>
 
-                      {/* Items List */}
                       <div className="space-y-4">
                         {formData.items.map((item, index) => (
                           <div
                             key={index}
                             className="flex gap-4 items-center bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-2xl shadow-lg border-2 border-blue-100 hover:shadow-xl transition-all duration-300"
                           >
-                            {/* Description */}
                             <div className="flex-1">
                               <Label
                                 htmlFor={`desc-${index}`}
@@ -402,7 +471,6 @@ export default function Billing() {
                               />
                             </div>
 
-                            {/* Amount */}
                             <div className="w-40">
                               <Label
                                 htmlFor={`amt-${index}`}
@@ -422,7 +490,6 @@ export default function Billing() {
                               />
                             </div>
 
-                            {/* Remove Button */}
                             {formData.items.length > 1 && (
                               <Button
                                 type="button"
@@ -438,7 +505,6 @@ export default function Billing() {
                         ))}
                       </div>
 
-                      {/* Total Display */}
                       <div className="flex justify-between items-center font-bold border-t-2 border-blue-200 pt-6 text-xl bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-2xl">
                         <span className="text-gray-800">Total Amount</span>
                         <span className="text-pink-600 text-2xl font-mono">${totalAmount.toFixed(2)}</span>
@@ -556,11 +622,11 @@ export default function Billing() {
             </Dialog>
           </div>
 
-          {/* Enhanced Invoice Table */}
+          {/* Invoice Table */}
           <div className="rounded-2xl border-2 border-blue-100 bg-gradient-to-br from-white to-blue-50/30 overflow-hidden shadow-xl">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gradient-to-rabsolute inset-0 bg-gradient-to-br from-pink-400 via-pink-500 to-purple-500 opacity-95 text-white border-0 shadow-lg h-12 mt-4">
+                <TableRow className="bg-gradient-to-r from-pink-400 via-pink-500 to-purple-500 text-white border-0 shadow-lg h-12">
                   <TableHead className="text-white font-semibold text-base">Family</TableHead>
                   <TableHead className="text-white font-semibold text-base">Amount</TableHead>
                   <TableHead className="text-white font-semibold text-base">Due Date</TableHead>
@@ -611,7 +677,10 @@ export default function Billing() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => alert(`Invoice Details:\n\n${JSON.stringify(inv, null, 2)}`)}
+                          onClick={() => {
+                            setSelectedInvoiceDetails(inv)
+                            setInvoiceDetailsOpen(true)
+                          }}
                           className="hover:bg-blue-100 text-black-600 hover:text-black-700 transition-colors"
                         >
                           <Eye className="h-4 w-4 mr-1" /> View
@@ -628,7 +697,10 @@ export default function Billing() {
                           size="sm"
                           variant="ghost"
                           className="text-pink-600 hover:bg-red-100 hover:text-pink-700 transition-colors"
-                          onClick={() => deleteInvoice(inv.id)}
+                          onClick={() => {
+                            setInvoiceToDelete(inv)
+                            setDeleteDialogOpen(true)
+                          }}
                         >
                           <Trash2 className="h-4 w-4 mr-1" /> Delete
                         </Button>
@@ -639,37 +711,307 @@ export default function Billing() {
               </TableBody>
             </Table>
           </div>
+
+          {/* INVOICE DETAILS POPUP (DESIGNED) */}
+          <Dialog
+            open={invoiceDetailsOpen}
+            onOpenChange={(open) => {
+              setInvoiceDetailsOpen(open)
+              if (!open) setSelectedInvoiceDetails(null)
+            }}
+          >
+            <DialogContent className="max-w-2xl border-0 shadow-2xl bg-gradient-to-br from-white to-blue-50/40">
+              {selectedInvoiceDetails && (
+                <>
+                  <DialogHeader className="pb-4">
+                    <DialogTitle className="flex items-center justify-between gap-3 text-2xl">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-gradient-to-r from-pink-500 to-purple-500 rounded-xl shadow-lg">
+                          <Receipt className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-sm uppercase tracking-wide text-gray-500">Invoice</p>
+                          <p className="font-semibold text-gray-900">
+                            {selectedInvoiceDetails.family}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            ID: <span className="font-mono">{selectedInvoiceDetails.id}</span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        {selectedInvoiceDetails.status === "paid" && (
+                          <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-md flex items-center gap-1">
+                            <CheckCircle className="h-4 w-4" />
+                            Paid
+                          </Badge>
+                        )}
+                        {selectedInvoiceDetails.status === "due" && (
+                          <Badge className="bg-gradient-to-r from-gray-500 to-gray-700 text-white shadow-md flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            Due
+                          </Badge>
+                        )}
+                        {selectedInvoiceDetails.status === "overdue" && (
+                          <Badge className="bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-md flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            Overdue
+                          </Badge>
+                        )}
+                        <span className="text-xs text-gray-500">
+                          Due date:{" "}
+                          <span className="font-medium text-gray-800">
+                            {selectedInvoiceDetails.dueDate}
+                          </span>
+                        </span>
+                      </div>
+                    </DialogTitle>
+                    <DialogDescription className="text-sm text-gray-600 mt-2">
+                      Detailed breakdown of this invoice, including all billed items and totals.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <DialogBody className="space-y-6">
+                    {/* Summary */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="col-span-1 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100 p-4 flex flex-col justify-between">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                            Total Amount
+                          </span>
+                          <DollarSign className="h-4 w-4 text-pink-600" />
+                        </div>
+                        <div className="text-2xl font-bold text-pink-600 font-mono">
+                          ${Number(selectedInvoiceDetails.amount ?? 0).toFixed(2)}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Including all invoice items.</p>
+                      </div>
+
+                      <div className="col-span-1 bg-white rounded-2xl border border-gray-100 p-4">
+                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                          Status
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {selectedInvoiceDetails.status === "paid" && (
+                            <>
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              <span className="text-sm font-semibold text-green-700">Paid</span>
+                            </>
+                          )}
+                          {selectedInvoiceDetails.status === "due" && (
+                            <>
+                              <Clock className="h-4 w-4 text-gray-600" />
+                              <span className="text-sm font-semibold text-gray-700">Due</span>
+                            </>
+                          )}
+                          {selectedInvoiceDetails.status === "overdue" && (
+                            <>
+                              <Clock className="h-4 w-4 text-red-600" />
+                              <span className="text-sm font-semibold text-red-700">Overdue</span>
+                            </>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Keep your billing up to date for a smooth experience.
+                        </p>
+                      </div>
+
+                      <div className="col-span-1 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border border-pink-100 p-4">
+                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                          Due Date
+                        </div>
+                        <div className="text-sm font-semibold text-gray-800">
+                          {selectedInvoiceDetails.dueDate}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          Please ensure payment is processed before this date.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Line items */}
+                    <div className="rounded-2xl border border-blue-100 bg-white overflow-hidden shadow-sm">
+                      <div className="px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 flex items-center justify-between">
+                        <span className="text-sm font-semibold text-gray-700">Invoice Items</span>
+                        <Calculator className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="hover:bg-transparent">
+                            <TableHead className="text-xs uppercase tracking-wide text-gray-500">
+                              #
+                            </TableHead>
+                            <TableHead className="text-xs uppercase tracking-wide text-gray-500">
+                              Description
+                            </TableHead>
+                            <TableHead className="text-xs uppercase tracking-wide text-gray-500 text-right">
+                              Amount
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedInvoiceDetails.items && selectedInvoiceDetails.items.length > 0 ? (
+                            selectedInvoiceDetails.items.map((item, idx) => (
+                              <TableRow key={idx} className="hover:bg-blue-50/60">
+                                <TableCell className="text-xs text-gray-500 font-mono">
+                                  {idx + 1}
+                                </TableCell>
+                                <TableCell className="text-sm text-gray-800">
+                                  {item.description || "—"}
+                                </TableCell>
+                                <TableCell className="text-sm text-right font-mono text-gray-900">
+                                  ${Number(item.amount || 0).toFixed(2)}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center text-sm text-gray-500 py-6">
+                                No items found for this invoice.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+
+                      <div className="flex items-center justify-between px-4 py-3 border-t border-blue-100 bg-blue-50/60">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                          Total
+                        </span>
+                        <span className="text-lg font-bold text-pink-600 font-mono">
+                          ${Number(selectedInvoiceDetails.amount ?? 0).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </DialogBody>
+
+                  <DialogFooter className="pt-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <Shield className="h-3 w-3" />
+                      <span>Securely generated by your billing system.</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setInvoiceDetailsOpen(false)}
+                      className="border-2 border-gray-300 hover:bg-gray-50"
+                    >
+                      Close
+                    </Button>
+                  </DialogFooter>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* DELETE CONFIRMATION POPUP (DESIGNED) */}
+          <Dialog
+            open={deleteDialogOpen}
+            onOpenChange={(open) => {
+              setDeleteDialogOpen(open)
+              if (!open) setInvoiceToDelete(null)
+            }}
+          >
+            <DialogContent className="max-w-md border-0 shadow-2xl bg-gradient-to-br from-white to-red-50/40">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-3 text-2xl">
+                  <div className="p-2 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl shadow-lg">
+                    <Trash2 className="h-6 w-6 text-white" />
+                  </div>
+                  Delete Invoice
+                </DialogTitle>
+                <DialogDescription className="text-sm text-gray-600 mt-2">
+                  This action cannot be undone. The invoice will be permanently removed from your billing records.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogBody className="space-y-4">
+                {invoiceToDelete && (
+                  <div className="rounded-2xl border border-red-100 bg-gradient-to-r from-red-50 to-pink-50 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-red-600 mb-1">
+                      You are deleting
+                    </p>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {invoiceToDelete.family}
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          Invoice ID: <span className="font-mono">{invoiceToDelete.id}</span>
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          Due Date:{" "}
+                          <span className="font-medium text-gray-800">
+                            {invoiceToDelete.dueDate}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-gray-500">Amount</p>
+                        <p className="text-lg font-bold text-red-600 font-mono">
+                          ${Number(invoiceToDelete.amount ?? 0).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-start gap-2 text-xs text-red-700 bg-red-50 border border-red-100 rounded-2xl px-3 py-2">
+                  <Shield className="h-3 w-3 mt-0.5" />
+                  <p>
+                    For security and audit reasons, this action should only be performed if you are sure this
+                    invoice was created in error.
+                  </p>
+                </div>
+              </DialogBody>
+              <DialogFooter className="gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDeleteDialogOpen(false)}
+                  className="border-2 border-gray-300 hover:bg-gray-50"
+                  disabled={deletingInvoice}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleConfirmDelete}
+                  disabled={!invoiceToDelete || deletingInvoice}
+                  className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white border-0 shadow-xl"
+                >
+                  {deletingInvoice ? "Deleting..." : "🗑️ Delete Invoice"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </Section>
 
+        {/* Collect Payments Section */}
         <Section
           title="Collect Payments"
-          description="Multiple secure payment options including Tap to Pay, Credit Card, and ACH transfers."
+          description="Multiple secure payment options including Tap to Pay, Credit Card, ACH transfers and Stripe Checkout."
         >
           <Tabs defaultValue="tap" value={tab} onValueChange={setTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-8 h-16 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-2xl p-2">
-              <TabsTrigger
-                value="tap"
-                // className="flex items-center gap-3 h-12 rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300"
-              >
+            <TabsList className="grid w-full grid-cols-4 mb-8 h-16 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-2xl p-2">
+              <TabsTrigger value="tap">
                 <Smartphone className="h-5 w-5" />
-                <span className="font-semibold">Tap to Pay</span>
+                <span className="font-semibold ml-2">Tap to Pay</span>
               </TabsTrigger>
-              <TabsTrigger
-                value="card"
-                // className="flex items-center gap-3 h-12 rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300"
-              >
+              <TabsTrigger value="card">
                 <CreditCard className="h-5 w-5" />
-                <span className="font-semibold">Credit Card</span>
+                <span className="font-semibold ml-2">Credit Card</span>
               </TabsTrigger>
-              <TabsTrigger
-                value="ach"
-                // className="flex items-center gap-3 h-12 rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300"
-              >
+              <TabsTrigger value="ach">
                 <Banknote className="h-5 w-5" />
-                <span className="font-semibold">ACH Transfer</span>
+                <span className="font-semibold ml-2">ACH Transfer</span>
+              </TabsTrigger>
+              {/* Stripe tab */}
+              <TabsTrigger value="stripe">
+                <Zap className="h-5 w-5" />
+                <span className="font-semibold ml-2">Fast Pay</span>
               </TabsTrigger>
             </TabsList>
 
+            {/* Tap to Pay */}
             <TabsContent value="tap" className="mt-0">
               <Card className="border-0 shadow-2xl bg-gradient-to-br from-pink-50 via-pink-50 to-purple-50 overflow-hidden">
                 <CardHeader className="text-center pb-6 bg-gradient-to-r from-pink-500/10 to-indigo-500/10">
@@ -684,7 +1026,7 @@ export default function Billing() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8 p-8">
-                  <br></br>
+                  <br />
                   <div className="text-center space-y-6">
                     <Dialog open={tapPaymentDialogOpen} onOpenChange={setTapPaymentDialogOpen}>
                       <DialogTrigger asChild>
@@ -694,7 +1036,7 @@ export default function Billing() {
                           <Zap className="h-6 w-6 mr-2" />Start Tap Session
                         </Button>
                       </DialogTrigger>
-                      <br></br>
+                      <br />
                       <DialogContent className="max-w-md border-0 shadow-2xl bg-gradient-to-br from-white to-blue-50/30">
                         <DialogHeader>
                           <DialogTitle className="flex items-center gap-3 text-2xl">
@@ -772,7 +1114,7 @@ export default function Billing() {
               </Card>
             </TabsContent>
 
-            {/* ---------- Credit Card ---------- */}
+            {/* Credit Card */}
             <TabsContent value="card" className="mt-0">
               <Card className="border-0 shadow-2xl bg-gradient-to-br from-green-50 to-emerald-50">
                 <CardHeader className="pb-6">
@@ -893,6 +1235,7 @@ export default function Billing() {
               </Card>
             </TabsContent>
 
+            {/* ACH */}
             <TabsContent value="ach" className="mt-0">
               <Card className="border-0 shadow-2xl bg-gradient-to-br from-orange-50 to-amber-50">
                 <CardHeader className="pb-6">
@@ -998,6 +1341,87 @@ export default function Billing() {
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Stripe Checkout */}
+            <TabsContent value="stripe" className="mt-0">
+              <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50 to-purple-50">
+                <CardHeader className="pb-6">
+                  <CardTitle className="flex items-center gap-3 text-2xl">
+                    <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+                      <Zap className="h-6 w-6 text-white" />
+                    </div>
+                    Stripe Checkout
+                  </CardTitle>
+                  <CardDescription className="text-base text-gray-600">
+                    Redirect families to a secure Stripe Checkout page for fast, trusted online payments.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6 max-w-lg mx-auto">
+                    <div className="space-y-2">
+                      <Label className="text-base font-semibold text-gray-700">
+                        Select Invoice
+                      </Label>
+                      <Select
+                        value={selectedInvoiceId || undefined}
+                        onValueChange={(val) => {
+                          console.log("Selected invoice:", val)
+                          setSelectedInvoiceId(val)
+                        }}
+                      >
+                        <SelectTrigger className="h-12 border-2 border-indigo-200 focus:border-indigo-400 bg-white">
+                          <SelectValue placeholder="Choose invoice to pay with Stripe" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {invoices.length === 0 && (
+                            <SelectItem value="__none" disabled>
+                              No invoices found
+                            </SelectItem>
+                          )}
+                          {invoices.map((inv) => (
+                            <SelectItem
+                              key={inv.id}
+                              value={inv.id}
+                              disabled={inv.status === "paid"}
+                            >
+                              {inv.family} — ${inv.amount} ({inv.status}
+                              {inv.status === "paid" ? " – already paid" : ""})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500">
+                        Paid invoices are disabled. Select a due/overdue invoice to pay via Stripe Checkout.
+                      </p>
+                    </div>
+
+                    <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex items-start gap-3">
+                      <Shield className="h-5 w-5 text-indigo-600 mt-0.5" />
+                      <div className="text-sm text-indigo-700">
+                        <p className="font-semibold mb-1">Secure by Stripe</p>
+                        <p>
+                          Card details are never stored on your servers. All payments are handled
+                          directly by Stripe with full PCI compliance.
+                        </p>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={handleStripePayment}
+                      disabled={
+                        !selectedInvoiceId ||
+                        selectedInvoiceId === "__none" ||
+                        invoices.find((i) => i.id === selectedInvoiceId)?.status === "paid"
+                      }
+                      className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white border-0 shadow-xl hover:shadow-2xl transition-all duration-300"
+                    >
+                      <Zap className="h-5 w-5 mr-2" />
+                      Fast Pay 
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
